@@ -1,4 +1,6 @@
+questionary
 black
 pre-commit
+twine
 setuptools
 wheel
