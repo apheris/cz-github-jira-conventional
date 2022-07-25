@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import os
-import sys
 import questionary
 
 
@@ -27,6 +26,7 @@ def main():
     elif answers == "release":
         os.system("black .")
         os.system("cz bump -ch")
+
 
 if __name__ == "__main__":
     main()

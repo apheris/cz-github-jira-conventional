@@ -25,12 +25,17 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     # Read the config file and check if required settings are available
     conf = config.read_cfg()
+    jira_prefix_hint = ""
     if "jira_prefix" in conf.settings:
         jira_prefix = conf.settings["jira_prefix"]
         issue_multiple_hint = "42, 123"
+        # if there is only one project prefix, show it as prefix hint
+        if not isinstance(jira_prefix, list):
+            jira_prefix_hint = jira_prefix
     else:
         jira_prefix = ""
         issue_multiple_hint = "XZ-42, XY-123"
+
     if "jira_base_url" not in conf.settings:
         print(
             "Please add the key jira_base_url to your .cz.yaml|json|toml config file."
@@ -110,7 +115,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
                 "type": "input",
                 "name": "scope",
                 "message": (
-                    f'JIRA issue number (multiple "{self.issue_multiple_hint}"). {self.jira_prefix}'
+                    f'JIRA issue number (multiple "{self.issue_multiple_hint}"). {self.jira_prefix_hint}'
                 ),
                 "filter": self.parse_scope,
             },
@@ -145,12 +150,24 @@ class GithubJiraConventionalCz(BaseCommitizen):
                 ),
             },
         ]
+        # If there are multiple Jira prefixes let the user select one
+        if isinstance(self.jira_prefix, list):
+            questions.insert(
+                1,
+                {
+                    "type": "list",
+                    "name": "issue_jira_prefix",
+                    "message": "JIRA project",
+                    "choices": [
+                        {"value": prefix, "name": prefix} for prefix in self.jira_prefix
+                    ],
+                },
+            )
         return questions
 
     def parse_scope(self, text):
         """
         Require and validate the scope to be Jira ids.
-        Parse the scope and add Jira prefixes if they were specified in the config.
         """
         if self.jira_prefix:
             issueRE = re.compile(r"\d+")
@@ -163,26 +180,23 @@ class GithubJiraConventionalCz(BaseCommitizen):
         issues = [i.strip() for i in text.strip().split(",")]
         for issue in issues:
             if not issueRE.fullmatch(issue):
-                raise InvalidAnswerError(f"JIRA scope of '{issue}' is invalid")
+                raise InvalidAnswerError(f"JIRA issue '{issue}' is not valid.")
 
-        if len(issues) == 1:
-            return self.jira_prefix + issues[0]
-
-        return required_validator(
-            ",".join([self.jira_prefix + i for i in issues]),
-            msg="JIRA scope is required",
-        )
+        return required_validator(issues, msg="JIRA scope is required")
 
     def message(self, answers: dict) -> str:
         prefix = answers["prefix"]
-        scope = answers["scope"]
+        issue_jira_prefix = answers["issue_jira_prefix"] if "issue_jira_prefix" in answers else self.jira_prefix
+        issues = answers["scope"]
         subject = answers["subject"]
         body = answers["body"]
         footer = answers["footer"]
         is_breaking_change = answers["is_breaking_change"]
 
-        if scope:
-            scope = f"({scope})"
+        if issues:
+            # Add Jira prefixes to the issue numbers.
+            issues_str = ",".join([issue_jira_prefix + i for i in issues])
+            scope = f"({issues_str})"
         if body:
             body = f"\n\n{body}"
         if is_breaking_change:

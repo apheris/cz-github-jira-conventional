@@ -31,7 +31,7 @@ The changelog created by cz (`cz bump --changelog`)will contain links to the com
 Install with pip
 `python -m pip install cz-github-jira-conventional` 
 
-You need to use a cz config file that has the **required** additional values `jira_base_url` and `github_repo` and may contain the **optional** value `jira_prefix` if you are only using one Jira project (then the prefix for this project will be added automatically).
+You need to use a cz config file that has the **required** additional values `jira_base_url` and `github_repo` and may contain the **optional** value `jira_prefix`.
 
 Example `.cz.yaml` config for this repository
 ```yaml
@@ -42,6 +42,18 @@ commitizen:
   jira_prefix: XX-
   jira_base_url: https://myproject.atlassian.net
   github_repo: apheris/cz-github-jira-conventional
+```
+
+The `jira_prefix` can be either 
+- empty (the user must write the prefix for each issue)
+- a string (the prefix will be added automatically)
+- a list (for multiple projects, the user will be asked to choose a prefix)
+
+```yaml
+  jira_prefix: 
+    - XX-
+    - XY-
+    - YY-
 ```
 
 ### pre-commit
