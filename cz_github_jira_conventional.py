@@ -186,7 +186,11 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def message(self, answers: dict) -> str:
         prefix = answers["prefix"]
-        issue_jira_prefix = answers["issue_jira_prefix"] if "issue_jira_prefix" in answers else self.jira_prefix
+        issue_jira_prefix = (
+            answers["issue_jira_prefix"]
+            if "issue_jira_prefix" in answers
+            else self.jira_prefix
+        )
         issues = answers["scope"]
         subject = answers["subject"]
         body = answers["body"]

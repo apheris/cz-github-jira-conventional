@@ -1,8 +1,7 @@
 commitizen:
+  github_repo: apheris/cz_github_jira_conventional
+  jira_base_url: https://myproject.atlassian.net
+  jira_prefix: XX-
   name: cz_github_jira_conventional
   tag_format: v$version
-  version: 1.0.0
-  jira_prefix: XX-
-  jira_base_url: https://myproject.atlassian.net
-  github_repo: apheris/cz_github_jira_conventional
-  
+  version: 1.1.0
