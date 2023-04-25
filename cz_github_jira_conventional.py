@@ -286,6 +286,3 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
 class InvalidAnswerError(CzException):
     ...
-
-
-discover_this = GithubJiraConventionalCz
