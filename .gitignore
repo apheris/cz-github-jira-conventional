@@ -3,3 +3,4 @@ __pycache__
 build
 dist
 cz_github_jira_conventional.egg-info
+.python-version
