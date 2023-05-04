@@ -9,6 +9,13 @@ from commitizen.cz.exceptions import CzException
 
 __all__ = ["GithubJiraConventionalCz"]
 
+DEFAULT_GITHUB_BASE_URL = "https://github.com/"
+DEFAULT_CHANGE_TYPE_MAP = {
+    "feat": "Feat",
+    "fix": "Fix",
+    "refactor": "Refactor",
+    "perf": "Perf",
+}
 
 def parse_subject(text):
     if isinstance(text, str):
@@ -41,18 +48,25 @@ class GithubJiraConventionalCz(BaseCommitizen):
             "Please add the key jira_base_url to your .cz.yaml|json|toml config file."
         )
         quit()
+    
     if "github_repo" not in conf.settings:
         print("Please add the key github_repo to your .cz.yaml|json|toml config file.")
         quit()
+    
     jira_base_url = conf.settings["jira_base_url"]
     github_repo = conf.settings["github_repo"]
-    # if "change_type_map" not in conf.settings:
-    change_type_map = {
-        "feat": "Feat",
-        "fix": "Fix",
-        "refactor": "Refactor",
-        "perf": "Perf",
-    }
+    
+    if "github_base_url" not in conf.settings:
+        github_base_url = DEFAULT_GITHUB_BASE_URL
+    else:
+        github_base_url = conf.settings["github_base_url"]
+    
+    if "change_type_map" not in conf.settings:
+        change_type_map = DEFAULT_CHANGE_TYPE_MAP
+    else:
+        #change_type_map = conf.settings["change_type_map"]
+        print("Only default change type map is supported at the moment.")
+        quit()
 
     def questions(self) -> List[Dict[str, Any]]:
         questions: List[Dict[str, Any]] = [
@@ -266,7 +280,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
             )
         parsed_message[
             "message"
-        ] = f"{m} [{rev[:5]}](https://github.com/{self.github_repo}/commit/{commit.rev})"
+        ] = f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
         return parsed_message
 
 
