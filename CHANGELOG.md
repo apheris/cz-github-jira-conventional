@@ -1,3 +1,10 @@
+## v2.0.0 (2023-06-15)
+
+### Feat
+
+- **[XX-0425](https://myproject.atlassian.net/browse/XX-0425)**: migrate to new plugin format [aaa35](https://github.com//apheris/cz_github_jira_conventional/commit/aaa35fbfbd95ee313916ac175f11efbf55635fab)
+- support custom github base URL [d1a32](https://github.com//apheris/cz_github_jira_conventional/commit/d1a322beabf402594d2a00abd9270e4c1c09d035)
+
 ## v1.1.0 (2022-07-26)
 
 ### Feat

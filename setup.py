@@ -9,7 +9,7 @@ with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="cz_github_jira_conventional",
-    version="1.1.0",
+    version="2.0.0",
     py_modules=["cz_github_jira_conventional"],
     author="Falko Krause, apheris AI GmbH",
     author_email="f.krause@apheris.com",
