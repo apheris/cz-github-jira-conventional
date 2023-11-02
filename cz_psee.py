@@ -30,8 +30,8 @@ class PSEECz(BaseCommitizen):
     bump_map = defaults.bump_map
     commit_parser = defaults.commit_parser
     # changelog_pattern = defaults.bump_pattern
-    changelog_pattern = r"^(feat|break|new|fix|hotfix|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)"
-    commit_parser = r"^(?P<change_type>feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)(?:\((?P<scope>[^()\r\n]*)\)|\()?(?P<breaking>!)?:\s(?P<message>.*)?"
+    changelog_pattern = r"^(feat|break|new|fix|hotfix|:feature:|:bug:|:rocket:|:hammer:)"
+    commit_parser = r"^(?P<change_type>feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:feature:|:bug:|:books:|:gem:|:hammer:|:rocket:|:package:|:construction_worker:|:wrench:)(?:\((?P<scope>[^()\r\n]*)\):||\()?(?P<breaking>!:)?\s(?P<message>.*)?"
     # print(changelog_pattern)
 
     # Read the config file and check if required settings are available
@@ -77,11 +77,10 @@ class PSEECz(BaseCommitizen):
         ":feature:": "Features",
         "fix": "Bug Fixes",
         ":bug:": "Bug Fixes",
-        "refactor": "Code Refactor",
-        ":recycle": "Code Refactor",
         "perf": "Performance improvements",
-        ":zap:": "Performance improvements",
-        ":test_tube:": "Tests",
+        ":rocket:": "Performance improvements",
+        "refactor": "Refactor",
+        ":hammer:": "Refactor"
     }
 
     def questions(self) -> List[Dict[str, Any]]:
@@ -261,7 +260,7 @@ class PSEECz(BaseCommitizen):
 
     def schema_pattern(self) -> str:
         PATTERN = (
-            r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)"
+            r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump|:feature:|:bug:|:books:|:gem:|:hammer:|:rocket:|:package:|:construction_worker:|:wrench:)"
             r"(\(\S+\))?!?:(\s.*)"
         )
         return PATTERN
