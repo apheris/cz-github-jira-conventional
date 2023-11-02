@@ -7,14 +7,15 @@ from commitizen.cz.base import BaseCommitizen
 from commitizen.cz.utils import multiple_line_breaker, required_validator
 from commitizen.cz.exceptions import CzException
 
-__all__ = ["GithubJiraConventionalCz"]
+__all__ = ["PSEECz"]
 
 DEFAULT_GITHUB_BASE_URL = "https://github.com/"
 DEFAULT_CHANGE_TYPE_MAP = {
-    "feat": "Feat",
-    "fix": "Fix",
-    "refactor": "Refactor",
-    "perf": "Perf",
+    "feat": "feat",
+    ":feature:": "Features",
+    "fix": "Bug Fixes",
+    "refactor": "Code Refactor",
+    "perf": "Performance improvements",
 }
 
 def parse_subject(text):
@@ -24,11 +25,14 @@ def parse_subject(text):
     return required_validator(text, msg="Subject is required.")
 
 
-class GithubJiraConventionalCz(BaseCommitizen):
+class PSEECz(BaseCommitizen):
     bump_pattern = defaults.bump_pattern
     bump_map = defaults.bump_map
     commit_parser = defaults.commit_parser
-    changelog_pattern = defaults.bump_pattern
+    # changelog_pattern = defaults.bump_pattern
+    changelog_pattern = r"^(feat|break|new|fix|hotfix|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)"
+    commit_parser = r"^(?P<change_type>feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)(?:\((?P<scope>[^()\r\n]*)\)|\()?(?P<breaking>!)?:\s(?P<message>.*)?"
+    # print(changelog_pattern)
 
     # Read the config file and check if required settings are available
     conf = config.read_cfg()
@@ -67,6 +71,18 @@ class GithubJiraConventionalCz(BaseCommitizen):
         #change_type_map = conf.settings["change_type_map"]
         print("Only default change type map is supported at the moment.")
         quit()
+
+    change_type_map = {
+        "feat": "Features",
+        ":feature:": "Features",
+        "fix": "Bug Fixes",
+        ":bug:": "Bug Fixes",
+        "refactor": "Code Refactor",
+        ":recycle": "Code Refactor",
+        "perf": "Performance improvements",
+        ":zap:": "Performance improvements",
+        ":test_tube:": "Tests",
+    }
 
     def questions(self) -> List[Dict[str, Any]]:
         questions: List[Dict[str, Any]] = [
@@ -223,7 +239,6 @@ class GithubJiraConventionalCz(BaseCommitizen):
             footer = f"\n\n{footer}"
 
         message = f"{prefix}{scope}: {subject}{body}{footer}"
-
         return message
 
     def example(self) -> str:
@@ -246,7 +261,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def schema_pattern(self) -> str:
         PATTERN = (
-            r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)"
+            r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump|:test_tube:|:feature:|:zap:|:recycle:|:wrench:|:memo:|:ambulance:|:construction_worker:)"
             r"(\(\S+\))?!?:(\s.*)"
         )
         return PATTERN

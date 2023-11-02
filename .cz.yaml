@@ -1,7 +1,7 @@
 commitizen:
-  github_repo: apheris/cz_github_jira_conventional
+  github_repo: prophesee-ai/sensor_research-cz_psee
   jira_base_url: https://myproject.atlassian.net
   jira_prefix: XX-
-  name: cz_github_jira_conventional
+  name: cz_psee
   tag_format: v$version
-  version: 1.1.0
+  version: 1.0.0
