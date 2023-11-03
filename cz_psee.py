@@ -11,12 +11,13 @@ __all__ = ["PSEECz"]
 
 DEFAULT_GITHUB_BASE_URL = "https://github.com/"
 DEFAULT_CHANGE_TYPE_MAP = {
-    "feat": "feat",
-    ":feature:": "Features",
-    "fix": "Bug Fixes",
-    "refactor": "Code Refactor",
-    "perf": "Performance improvements",
-}
+        ":boom:": "BREAKING CHANGES",
+        ":sparkles:": "Features",
+        ":bug:": "Bug Fixes",
+        ":ambulance:": "Hotfix",
+        ":zap:": "Performance improvements",
+        ":recycle:": "Refactor"
+    }
 
 def parse_subject(text):
     if isinstance(text, str):
@@ -26,13 +27,17 @@ def parse_subject(text):
 
 
 class PSEECz(BaseCommitizen):
-    bump_pattern = defaults.bump_pattern
-    bump_map = defaults.bump_map
+    bump_pattern = r"^(:boom:|:sparkles:|:bug:|:ambulance:)"
+    bump_map = {":boom:": "MAJOR", ":sparkles:": "MINOR", ":bug:": "PATCH", ":ambulance:": "PATCH"}
     commit_parser = defaults.commit_parser
-    # changelog_pattern = defaults.bump_pattern
-    changelog_pattern = r"^(feat|break|new|fix|hotfix|:feature:|:bug:|:rocket:|:hammer:)"
-    commit_parser = r"^(?P<change_type>feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:feature:|:bug:|:books:|:gem:|:hammer:|:rocket:|:package:|:construction_worker:|:wrench:)(?:\((?P<scope>[^()\r\n]*)\):||\()?(?P<breaking>!:)?\s(?P<message>.*)?"
-    # print(changelog_pattern)
+    changelog_pattern = r"^(feat|break|new|fix|hotfix|:sparkles:|:bug:|:zap:|:recycle:)"
+    regex_change_type = "feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:sparkles:|:bug:|:memo:|:art:|:recycle:|:zap:|:green_heart:|:construction_worker:|:wrench:|:boom:|:ambulance:"
+    re_change_type_emoji = "|".join([":test_tube:",":sparkles:",":bug:",":memo:",":art:",":recycle:",":zap:",":green_heart:",":construction_worker:",":wrench:",":boom:",":ambulance:"])
+    regex_scope = "[^()\r\n]*"
+    regex_breaking = "!:"
+    regex_message = ".*"
+    re_emoji = f'^(?P<change_type>^{re_change_type_emoji})(?:\((?P<scope>{regex_scope})\):||\()?(?P<breaking>{regex_breaking})?\s(?P<message>{regex_message})?'
+    commit_parser = fr'{re_emoji}'
 
     # Read the config file and check if required settings are available
     conf = config.read_cfg()
@@ -72,17 +77,6 @@ class PSEECz(BaseCommitizen):
         print("Only default change type map is supported at the moment.")
         quit()
 
-    change_type_map = {
-        "feat": "Features",
-        ":feature:": "Features",
-        "fix": "Bug Fixes",
-        ":bug:": "Bug Fixes",
-        "perf": "Performance improvements",
-        ":rocket:": "Performance improvements",
-        "refactor": "Refactor",
-        ":hammer:": "Refactor"
-    }
-
     def questions(self) -> List[Dict[str, Any]]:
         questions: List[Dict[str, Any]] = [
             {
@@ -91,53 +85,68 @@ class PSEECz(BaseCommitizen):
                 "message": "Select the type of change you are committing",
                 "choices": [
                     {
-                        "value": "fix",
-                        "name": "fix: A bug fix. Correlates with PATCH in SemVer",
+                        "value": ":bug:",
+                        "name": "🐛 A bug fix. Correlates with PATCH in SemVer",
                     },
                     {
-                        "value": "feat",
-                        "name": "feat: A new feature. Correlates with MINOR in SemVer",
-                    },
-                    {"value": "docs", "name": "docs: Documentation only changes"},
+                        "value": "::ambulance::",
+                        "name": "🚑️ Critical hotfix. Correlates with PATCH in SemVer",
+                    },                    
                     {
-                        "value": "style",
+                        "value": ":sparkles:",
+                        "name": "✨ A new feature. Correlates with MINOR in SemVer",
+                    },
+                    {
+                        "value": ":boom:",
+                        "name": "💥 Introduce breaking changes. Correlates with MAJOR in SemVer",
+                    },                    
+                    {"value": ":memo:", "name": "📝 Documentation only changes"},
+                    {
+                        "value": ":art:",
                         "name": (
-                            "style: Changes that do not affect the "
+                            "🎨 Changes that do not affect the "
                             "meaning of the code (white-space, formatting,"
                             " missing semi-colons, etc)"
                         ),
                     },
                     {
-                        "value": "refactor",
+                        "value": ":recycle:",
                         "name": (
-                            "refactor: A code change that neither fixes "
+                            "♻️ A code change that neither fixes "
                             "a bug nor adds a feature"
                         ),
                     },
                     {
-                        "value": "perf",
-                        "name": "perf: A code change that improves performance",
+                        "value": ":zap:",
+                        "name": "⚡️ A code change that improves performance",
                     },
                     {
-                        "value": "test",
+                        "value": ":test_tube:",
                         "name": (
-                            "test: Adding missing or correcting " "existing tests"
+                            "🧪 Adding missing or correcting " "existing tests"
                         ),
                     },
                     {
-                        "value": "build",
+                        "value": ":wrench:",
                         "name": (
-                            "build: Changes that affect the build system or "
+                            "🔧 changes that do not relate to a fix or feature and don't modify"
+                            " src or test files (for example updating dependencies)"
+                        ),
+                    },                    
+                    {
+                        "value": ":construction_worker:",
+                        "name": (
+                            "👷 Changes that affect the build system or "
                             "external dependencies (example scopes: pip, docker, npm)"
                         ),
                     },
                     {
-                        "value": "ci",
+                        "value": ":green_heart:",
                         "name": (
-                            "ci: Changes to our CI configuration files and "
+                            "💚 Changes to our CI configuration files and "
                             "scripts (example scopes: GitLabCI)"
                         ),
-                    },
+                    },        
                 ],
             },
             {
@@ -233,7 +242,7 @@ class PSEECz(BaseCommitizen):
         if body:
             body = f"\n\n{body}"
         if is_breaking_change:
-            footer = f"BREAKING CHANGE: {footer}"
+            footer = f":boom: {footer}"
         if footer:
             footer = f"\n\n{footer}"
 
