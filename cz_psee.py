@@ -30,7 +30,7 @@ class PSEECz(BaseCommitizen):
     bump_pattern = r"^(:boom:|:sparkles:|:bug:|:ambulance:)"
     bump_map = {":boom:": "MAJOR", ":sparkles:": "MINOR", ":bug:": "PATCH", ":ambulance:": "PATCH"}
     commit_parser = defaults.commit_parser
-    changelog_pattern = r"^(feat|break|new|fix|hotfix|:sparkles:|:bug:|:zap:|:recycle:)"
+    changelog_pattern = r"^(feat|break|new|fix|hotfix|:sparkles:|:bug:|:ambulance:|:zap:|:recycle:)"
     regex_change_type = "feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:sparkles:|:bug:|:memo:|:art:|:recycle:|:zap:|:green_heart:|:construction_worker:|:wrench:|:boom:|:ambulance:"
     re_change_type_emoji = "|".join([":test_tube:",":sparkles:",":bug:",":memo:",":art:",":recycle:",":zap:",":green_heart:",":construction_worker:",":wrench:",":boom:",":ambulance:"])
     regex_scope = "[^()\r\n]*"
@@ -89,7 +89,7 @@ class PSEECz(BaseCommitizen):
                         "name": "🐛 A bug fix. Correlates with PATCH in SemVer",
                     },
                     {
-                        "value": "::ambulance::",
+                        "value": ":ambulance:",
                         "name": "🚑️ Critical hotfix. Correlates with PATCH in SemVer",
                     },                    
                     {
@@ -153,7 +153,7 @@ class PSEECz(BaseCommitizen):
                 "type": "input",
                 "name": "scope",
                 "message": (
-                    f'JIRA issue number (multiple "{self.issue_multiple_hint}"). {self.jira_prefix_hint}'
+                    f'JIRA issue number (multiple "{self.issue_multiple_hint}"). {self.jira_prefix_hint}: (press [enter] to skip)'
                 ),
                 "filter": self.parse_scope,
             },
@@ -239,6 +239,8 @@ class PSEECz(BaseCommitizen):
             # Add Jira prefixes to the issue numbers.
             issues_str = ",".join([issue_jira_prefix + i for i in issues])
             scope = f"({issues_str})"
+        else:
+            scope=""
         if body:
             body = f"\n\n{body}"
         if is_breaking_change:
@@ -246,7 +248,11 @@ class PSEECz(BaseCommitizen):
         if footer:
             footer = f"\n\n{footer}"
 
-        message = f"{prefix}{scope}: {subject}{body}{footer}"
+        if scope:
+            message = f"{prefix}{scope} {subject}{body}{footer}"
+        else:
+            message = f"{prefix} {subject}{body}{footer}"
+
         return message
 
     def example(self) -> str:
