@@ -1,13 +1,13 @@
-# cz-github-jira-conventional
+# cz-psee
 
-**cz-github-jira-conventional** is a plugin for the [**commitizen tools**](https://github.com/commitizen-tools/commitizen), a toolset that helps you to create [**conventional commit messages**](https://www.conventionalcommits.org/en/v1.0.0/). Since the structure of conventional commits messages is standardized they are machine readable and allow commitizen to automaticially calculate and tag [**semantic version numbers**](https://semver.org/) as well as create **CHANGELOG.md** files for your releases.
+**cz-psee** is a fork of cz-github-jira-conventional. It is a plugin for the [**commitizen tools**](https://github.com/commitizen-tools/commitizen), a toolset that helps you to create [**conventional commit messages**](https://www.conventionalcommits.org/en/v1.0.0/). Since the structure of conventional commits messages is standardized they are machine readable and allow commitizen to automaticially calculate and tag [**semantic version numbers**](https://semver.org/) as well as create **CHANGELOG.md** files for your releases.
 
 This plugin extends the commitizen tools by:
 - **require a Jira issue id** in the commit message
 - **create links to GitHub** commits in the CHANGELOG.md
 - **create links to Jira** issues in the CHANGELOG.md
 
-When you call commitizen `commit` you will be required you to enter the scope of your commit as a Jira issue id (or multiple issue ids, prefixed or without prefix, see config below).
+When you call commitizen `commit` you can enter the scope of your commit as a Jira issue id (or multiple issue ids, prefixed or without prefix, see config below).
 ```
 > cz commit
 ? Select the type of change you are committing fix: A bug fix. Correlates with PATCH in SemVer
@@ -25,18 +25,23 @@ The changelog created by cz (`cz bump --changelog`)will contain links to the com
 - **[XX-42](https://myproject.atlassian.net/browse/XX-42),[XX-13](https://myproject.atlassian.net/browse/XX-13)**: allow multiple issue to be referenced in the commit [07ab0](https://github.com/apheris/cz-github-jira-conventional/commit/07ab0e09de36712ab1db93fff0c821ecd80b5849)
 ``` 
 
+The commit message can also accept an emoji. For exemple:
+
+```
+feat :sparkles:(XX-123): my message
+```
 
 ## Installation
 
 Install with pip
-`python -m pip install cz-github-jira-conventional` 
+`python -m pip install git+https://git@github.com/prophesee-ai/sensor_research-cz_psee.git` 
 
 You need to use a cz config file that has the **required** additional values `jira_base_url` and `github_repo` and may contain the **optional** value `jira_prefix`.
 
 Example `.cz.yaml` config for this repository
 ```yaml
 commitizen:
-  name: cz_github_jira_conventional
+  name: cz_psee
   tag_format: v$version
   version: 1.0.0
   jira_prefix: XX-
@@ -67,7 +72,7 @@ repos:
     hooks:
       - id: commitizen
         stages: [commit-msg]
-        additional_dependencies: [cz-github-jira-conventional]
+        additional_dependencies: [cz_psee]
 ```
 Install the hook with 
 ```bash
