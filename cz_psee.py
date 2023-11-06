@@ -35,7 +35,7 @@ class PSEECz(BaseCommitizen):
     regex_scope = "[^()\r\n]*"
     regex_breaking = "!"
     regex_message = ".*"
-    re_emoji = f'^(?P<change_type>^{re_change_type_emoji})(?P<emoji>[ ]:[^:]*:)?(?:\((?P<scope>{regex_scope})\)|\()?(?P<breaking>{regex_breaking})?:\s(?P<message>{regex_message})?'
+    re_emoji = f'^(?P<change_type>^{re_change_type_emoji})[ ]?(?P<emoji>[ ]:[^:]*:)?(?:\((?P<scope>{regex_scope})\)|\()?(?P<breaking>{regex_breaking})?:\s(?P<message>{regex_message})?'
     commit_parser = fr'{re_emoji}'
 
     # Read the config file and check if required settings are available
