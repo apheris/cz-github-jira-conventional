@@ -243,14 +243,14 @@ class PSEECz(BaseCommitizen):
         if body:
             body = f"\n\n{body}"
         if is_breaking_change:
-            footer = f":boom: {footer}"
+            footer = f"BREAKING CHANGE: {footer}"
         if footer:
             footer = f"\n\n{footer}"
 
         if scope:
-            message = f"{prefix}{scope} {subject}{body}{footer}"
+            message = f"{prefix}{scope}: {subject}{body}{footer}"
         else:
-            message = f"{prefix} {subject}{body}{footer}"
+            message = f"{prefix}: {subject}{body}{footer}"
 
         return message
 
