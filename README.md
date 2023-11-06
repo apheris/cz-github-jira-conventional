@@ -47,6 +47,10 @@ commitizen:
   jira_prefix: XX-
   jira_base_url: https://myproject.atlassian.net
   github_repo: apheris/cz-github-jira-conventional
+  update_changelog_on_bump: true
+  tag_format: v$version
+  changelog_file: CHANGELOG.md
+  changelog_incremental: true
 ```
 
 The `jira_prefix` can be either 
