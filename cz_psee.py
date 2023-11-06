@@ -11,12 +11,12 @@ __all__ = ["PSEECz"]
 
 DEFAULT_GITHUB_BASE_URL = "https://github.com/"
 DEFAULT_CHANGE_TYPE_MAP = {
-        ":boom:": "BREAKING CHANGES",
-        ":sparkles:": "Features",
-        ":bug:": "Bug Fixes",
-        ":ambulance:": "Hotfix",
-        ":zap:": "Performance improvements",
-        ":recycle:": "Refactor"
+        "BREAKING CHANGES": "BREAKING CHANGES",
+        "feat": "Features",
+        "fix": "Bug Fixes",
+        "hotfix:": "Hotfix",
+        "perf": "Performance improvements",
+        "refactor": "Refactor"
     }
 
 def parse_subject(text):
@@ -27,16 +27,15 @@ def parse_subject(text):
 
 
 class PSEECz(BaseCommitizen):
-    bump_pattern = r"^(:boom:|:sparkles:|:bug:|:ambulance:)"
-    bump_map = {":boom:": "MAJOR", ":sparkles:": "MINOR", ":bug:": "PATCH", ":ambulance:": "PATCH"}
+    bump_pattern = r"^(BREAKING CHANGE|feat|fix|hotfix)"
+    bump_map = {"BREAKING CHANGE": "MAJOR", "feat": "MINOR", "fix": "PATCH", "hotfix": "PATCH"}
     commit_parser = defaults.commit_parser
-    changelog_pattern = r"^(feat|break|new|fix|hotfix|:sparkles:|:bug:|:ambulance:|:zap:|:recycle:)"
-    regex_change_type = "feat|fix|refactor|perf|BREAKING CHANGE|:test_tube:|:sparkles:|:bug:|:memo:|:art:|:recycle:|:zap:|:green_heart:|:construction_worker:|:wrench:|:boom:|:ambulance:"
-    re_change_type_emoji = "|".join([":test_tube:",":sparkles:",":bug:",":memo:",":art:",":recycle:",":zap:",":green_heart:",":construction_worker:",":wrench:",":boom:",":ambulance:"])
+    changelog_pattern = r"^(feat|BREAKING CHANGE|fix|hotfix|refactor|build)"
+    re_change_type_emoji = "|".join(["test","feat","fix","docs","style","refactor","perf","ci","build","chore","BREAKING CHANGE","hotfix"])
     regex_scope = "[^()\r\n]*"
-    regex_breaking = "!:"
+    regex_breaking = "!"
     regex_message = ".*"
-    re_emoji = f'^(?P<change_type>^{re_change_type_emoji})(?:\((?P<scope>{regex_scope})\):||\()?(?P<breaking>{regex_breaking})?\s(?P<message>{regex_message})?'
+    re_emoji = f'^(?P<change_type>^{re_change_type_emoji})(?P<emoji>[ ]:[^:]*:)?(?:\((?P<scope>{regex_scope})\)|\()?(?P<breaking>{regex_breaking})?:\s(?P<message>{regex_message})?'
     commit_parser = fr'{re_emoji}'
 
     # Read the config file and check if required settings are available
@@ -85,65 +84,65 @@ class PSEECz(BaseCommitizen):
                 "message": "Select the type of change you are committing",
                 "choices": [
                     {
-                        "value": ":bug:",
-                        "name": "🐛 A bug fix. Correlates with PATCH in SemVer",
+                        "value": "fix :bug:",
+                        "name": "fix 🐛: A bug fix. Correlates with PATCH in SemVer",
                     },
                     {
-                        "value": ":ambulance:",
-                        "name": "🚑️ Critical hotfix. Correlates with PATCH in SemVer",
+                        "value": "hotfix :ambulance:",
+                        "name": "hotfix 🚑️: Critical hotfix. Correlates with PATCH in SemVer",
                     },                    
                     {
-                        "value": ":sparkles:",
-                        "name": "✨ A new feature. Correlates with MINOR in SemVer",
+                        "value": "feat :sparkles:",
+                        "name": "feat ✨: A new feature. Correlates with MINOR in SemVer",
                     },
                     {
-                        "value": ":boom:",
-                        "name": "💥 Introduce breaking changes. Correlates with MAJOR in SemVer",
+                        "value": "BREAKING CHANGE :boom:",
+                        "name": "BREAKING CHANGE 💥: Introduce breaking changes. Correlates with MAJOR in SemVer",
                     },                    
-                    {"value": ":memo:", "name": "📝 Documentation only changes"},
+                    {"value": "docs :memo:", "name": "docs 📝: Documentation only changes"},
                     {
                         "value": ":art:",
                         "name": (
-                            "🎨 Changes that do not affect the "
+                            "style 🎨: Changes that do not affect the "
                             "meaning of the code (white-space, formatting,"
                             " missing semi-colons, etc)"
                         ),
                     },
                     {
-                        "value": ":recycle:",
+                        "value": "refactor :recycle:",
                         "name": (
-                            "♻️ A code change that neither fixes "
+                            "refactor ♻️: A code change that neither fixes "
                             "a bug nor adds a feature"
                         ),
                     },
                     {
-                        "value": ":zap:",
-                        "name": "⚡️ A code change that improves performance",
+                        "value": "perf :zap:",
+                        "name": "perf ⚡️: A code change that improves performance",
                     },
                     {
-                        "value": ":test_tube:",
+                        "value": "test :test_tube:",
                         "name": (
-                            "🧪 Adding missing or correcting " "existing tests"
+                            "test 🧪: Adding missing or correcting " "existing tests"
                         ),
                     },
                     {
-                        "value": ":wrench:",
+                        "value": "chore :wrench:",
                         "name": (
-                            "🔧 changes that do not relate to a fix or feature and don't modify"
+                            "chore 🔧: changes that do not relate to a fix or feature and don't modify"
                             " src or test files (for example updating dependencies)"
                         ),
                     },                    
                     {
-                        "value": ":construction_worker:",
+                        "value": "build :construction_worker:",
                         "name": (
-                            "👷 Changes that affect the build system or "
+                            "build 👷: Changes that affect the build system or "
                             "external dependencies (example scopes: pip, docker, npm)"
                         ),
                     },
                     {
-                        "value": ":green_heart:",
+                        "value": "ci :green_heart:",
                         "name": (
-                            "💚 Changes to our CI configuration files and "
+                            "ci 💚: Changes to our CI configuration files and "
                             "scripts (example scopes: GitLabCI)"
                         ),
                     },        
