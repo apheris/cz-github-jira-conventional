@@ -273,11 +273,12 @@ class PSEECz(BaseCommitizen):
         )
 
     def schema_pattern(self) -> str:
-        PATTERN = (
-            r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump|:feature:|:bug:|:books:|:gem:|:hammer:|:rocket:|:package:|:construction_worker:|:wrench:)"
-            r"(\(\S+\))?!?:(\s.*)"
-        )
-        return PATTERN
+        re_change_type_emoji = "|".join(["test","feat","fix","docs","style","refactor","perf","ci","build","chore","BREAKING CHANGE","hotfix"])
+        regex_scope = "[^()\r\n]*"
+        regex_breaking = "!"
+        regex_message = ".*"
+        re_emoji = f'^(?P<change_type>^{re_change_type_emoji})[ ]?(?P<emoji>[ ]:[^:]*:)?(?:\((?P<scope>{regex_scope})\)|\()?(?P<breaking>{regex_breaking})?:\s(?P<message>{regex_message})?'
+        return fr'{re_emoji}'
 
     def info(self) -> str:
         dir_path = os.path.dirname(os.path.realpath(__file__))
