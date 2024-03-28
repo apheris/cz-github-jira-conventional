@@ -273,7 +273,7 @@ class PSEECz(BaseCommitizen):
         )
 
     def schema_pattern(self) -> str:
-        re_change_type_emoji = "|".join(["test","feat","fix","docs","style","refactor","perf","ci","build","chore","BREAKING CHANGE","hotfix"])
+        re_change_type_emoji = "|".join(["test","feat","fix","docs","style","refactor","perf","ci","build","chore","BREAKING CHANGE","hotfix","bump"])
         regex_scope = "[^()\r\n]*"
         regex_breaking = "!"
         regex_message = ".*"
