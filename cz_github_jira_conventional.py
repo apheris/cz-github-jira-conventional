@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 
 from commitizen import defaults, git, config
 from commitizen.cz.base import BaseCommitizen
+from commitizen.cz.conventional_commits import ConventionalCommitsCz
 from commitizen.cz.utils import multiple_line_breaker, required_validator
 from commitizen.cz.exceptions import CzException
 
@@ -17,6 +18,7 @@ DEFAULT_CHANGE_TYPE_MAP = {
     "perf": "Perf",
 }
 
+
 def parse_subject(text):
     if isinstance(text, str):
         text = text.strip(".").strip()
@@ -27,7 +29,7 @@ def parse_subject(text):
 class GithubJiraConventionalCz(BaseCommitizen):
     bump_pattern = defaults.bump_pattern
     bump_map = defaults.bump_map
-    commit_parser = defaults.commit_parser
+    commit_parser = ConventionalCommitsCz.commit_parser
     changelog_pattern = defaults.bump_pattern
 
     # Read the config file and check if required settings are available
@@ -48,23 +50,23 @@ class GithubJiraConventionalCz(BaseCommitizen):
             "Please add the key jira_base_url to your .cz.yaml|json|toml config file."
         )
         quit()
-    
+
     if "github_repo" not in conf.settings:
         print("Please add the key github_repo to your .cz.yaml|json|toml config file.")
         quit()
-    
+
     jira_base_url = conf.settings["jira_base_url"]
     github_repo = conf.settings["github_repo"]
-    
+
     if "github_base_url" not in conf.settings:
         github_base_url = DEFAULT_GITHUB_BASE_URL
     else:
         github_base_url = conf.settings["github_base_url"]
-    
+
     if "change_type_map" not in conf.settings:
         change_type_map = DEFAULT_CHANGE_TYPE_MAP
     else:
-        #change_type_map = conf.settings["change_type_map"]
+        # change_type_map = conf.settings["change_type_map"]
         print("Only default change type map is supported at the moment.")
         quit()
 
@@ -278,11 +280,10 @@ class GithubJiraConventionalCz(BaseCommitizen):
                     for issue_id in parsed_message["scope"].split(",")
                 ]
             )
-        parsed_message[
-            "message"
-        ] = f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
+        parsed_message["message"] = (
+            f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
+        )
         return parsed_message
 
 
-class InvalidAnswerError(CzException):
-    ...
+class InvalidAnswerError(CzException): ...
