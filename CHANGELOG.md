@@ -1,3 +1,9 @@
+## v3.0.0 (2024-06-12)
+
+### Fix
+
+- **[XX-9](https://myproject.atlassian.net/browse/XX-9)**: import of default commit parser [8923d](https://github.com//apheris/cz_github_jira_conventional/commit/8923d361adc983b0ad6260631530d0fb60aaef74)
+
 ## v2.0.0 (2023-06-15)
 
 ### Feat

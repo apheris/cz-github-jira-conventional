@@ -280,10 +280,11 @@ class GithubJiraConventionalCz(BaseCommitizen):
                     for issue_id in parsed_message["scope"].split(",")
                 ]
             )
-        parsed_message["message"] = (
-            f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
-        )
+        parsed_message[
+            "message"
+        ] = f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
         return parsed_message
 
 
-class InvalidAnswerError(CzException): ...
+class InvalidAnswerError(CzException):
+    ...
