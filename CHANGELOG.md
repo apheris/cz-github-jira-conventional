@@ -1,3 +1,9 @@
+## v3.0.1 (2024-06-12)
+
+### Fix
+
+- fix the install_requires commitizen version [951b5](https://github.com//apheris/cz_github_jira_conventional/commit/951b508a3d12833cb69364ca92e16b5b9d724926)
+
 ## v3.0.0 (2024-06-12)
 
 ### Fix
