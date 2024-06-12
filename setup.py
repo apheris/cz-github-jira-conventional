@@ -15,7 +15,7 @@ setup(
     author_email="f.krause@apheris.com",
     license="MIT",
     url="https://github.com/apheris/cz-github-jira-conventional",
-    install_requires=["commitizen^3.21.3"],
+    install_requires=["commitizen>=3.21.3"],
     description="Extend the commitizen tools to create conventional commits and README that link to Jira and GitHub.",
     long_description=long_description,
     long_description_content_type="text/markdown",
