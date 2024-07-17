@@ -1,6 +1,6 @@
-questionary
-black
-pre-commit
-twine
-setuptools
-wheel
+questionary==1.10.0
+black==23.3.0
+pre-commit==3.3.3
+twine==4.0.2
+setuptools==68.2.2
+wheel==0.43.0
