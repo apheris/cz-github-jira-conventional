@@ -27,10 +27,10 @@ def parse_subject(text):
 
 
 class GithubJiraConventionalCz(BaseCommitizen):
-    bump_pattern = defaults.bump_pattern
-    bump_map = defaults.bump_map
+    bump_pattern = defaults.BUMP_PATTERN
+    bump_map = defaults.BUMP_MAP
     commit_parser = ConventionalCommitsCz.commit_parser
-    changelog_pattern = defaults.bump_pattern
+    changelog_pattern = defaults.BUMP_PATTERN
 
     # Read the config file and check if required settings are available
     conf = config.read_cfg()
