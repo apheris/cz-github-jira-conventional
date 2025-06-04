@@ -1,3 +1,9 @@
+## v3.0.2 (2025-06-04)
+
+### Fix
+
+- broken import cz default [e9520](https://github.com//apheris/cz_github_jira_conventional/commit/e9520b967584c101f1281b424d87395d0feb2695)
+
 ## v3.0.1 (2024-06-12)
 
 ### Fix
