@@ -1,5 +1,5 @@
 questionary==1.10.0
-black==24.3.0
+black==26.3.1
 pre-commit==3.3.3
 twine==4.0.2
 setuptools==78.1.1
