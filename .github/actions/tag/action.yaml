@@ -1,9 +1,8 @@
 name: Tag release commits
 description: "Tag a release commit with the version found in the commitizen configuration file"
 
-# Vendored copy of apheris/github-actions/tag@53a666f9 (v4.1.2). That repository is private and
-# cannot be resolved from this public repository, so the action lives here. Unchanged apart from
-# exposing the tag as an output.
+# Checks whether a commit is a release commit ("bump: release ..."), reads the version from the
+# commitizen configuration file and creates the matching annotated tag through the GitHub API.
 
 inputs:
   commit-message:

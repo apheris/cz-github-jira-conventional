@@ -1,14 +1,14 @@
 name: Generate Changelog - Python Commitizen
 description: "Bump the version, generate the changelog and open a release pull request"
 
-# Vendored copy of apheris/github-actions/generate-changelog/python-commitizen@53a666f9 (v4.1.2).
-# That repository is private and cannot be resolved from this public repository, so the action
-# lives here. Differences to upstream:
-#   * the commitizen plugin is installed from this checkout instead of from PyPI, so the release is
-#     prepared with the version of the plugin that is about to be released
-#   * the token defaults to the caller's GITHUB_TOKEN (the releaser-apheris app secrets are not
-#     available to this repository); commits are still signed because they are created through the
-#     GraphQL API by planetscale/ghcommit-action
+# Bumps the version with commitizen, regenerates the changelog and opens a release pull request.
+#
+# The commitizen plugin is installed from this checkout, so a release is prepared with the version
+# of the plugin that is about to be released.
+#
+# The pull request branch, the commit and the pull request itself are created through the GitHub API
+# rather than pushed from the runner, so that the commit is signed with GitHub's GPG key and shows
+# as Verified. See https://github.com/actions/runner/issues/667.
 
 inputs:
   increment-type:

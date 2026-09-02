@@ -43,8 +43,7 @@ jobs:
         with:
           increment-type: ${{ inputs.increment-type }}
           base-branch: ${{ inputs.base-branch }}
-          # The releaser-apheris app secrets are not available to this repository, so the
-          # built-in token is used. The bump commit is still signed: the action commits through
-          # planetscale/ghcommit-action, i.e. the GraphQL API, and GitHub signs those commits
-          # with its own GPG key. The commit is authored by github-actions[bot].
+          # The commit is signed even though the built-in token is used: the action commits
+          # through the GraphQL API, and GitHub signs those commits with its own GPG key.
+          # The commit is authored by github-actions[bot].
           token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,7 @@
 # Releasing
 
-Releases are automated with GitHub Actions, using local copies of the shared actions from
-[apheris/github-actions](https://github.com/apheris/github-actions).
+Releases are automated with GitHub Actions. Nothing has to be built, tagged or uploaded from a
+developer machine.
 
 ## Release process
 
@@ -14,8 +14,6 @@ Releases are automated with GitHub Actions, using local copies of the shared act
    publishing (environment `pypi`, no API token) and creates the GitHub release with the changelog
    section for that version.
 
-Nothing has to be built, tagged or uploaded from a developer machine.
-
 ## Increment types
 
 `auto` lets commitizen determine the increment from the commit messages. Pass `PATCH`, `MINOR` or
@@ -25,7 +23,7 @@ Nothing has to be built, tagged or uploaded from a developer machine.
 `experimental` (only from an `experimental-*` branch) creates `X.Y.Z-alpha.N`. Both are published
 as GitHub pre-releases.
 
-## Workflows
+## Workflows and actions
 
 | File | Trigger | Purpose |
 | --- | --- | --- |
@@ -33,24 +31,20 @@ as GitHub pre-releases.
 | `.github/workflows/release-changelog.yaml` | manual | Version bump, changelog, release PR |
 | `.github/workflows/release-publish.yaml` | push to `main` | Tag the release commit, build, publish to PyPI, create the GitHub release |
 
-The workflows call local composite actions in `.github/actions/`, which are vendored copies of
-`apheris/github-actions@53a666f9` (v4.1.2):
+The workflow steps live in local composite actions:
 
-| Local action | Upstream |
+| Action | Purpose |
 | --- | --- |
-| `.github/actions/validate-conventional-commits` | `validate-conventional-commits` |
-| `.github/actions/generate-changelog` | `generate-changelog/python-commitizen` |
-| `.github/actions/tag` | `tag` |
+| `.github/actions/validate-conventional-commits` | Run `cz check` against the pull request title and commits |
+| `.github/actions/generate-changelog` | Run `cz bump --files-only --changelog` and open the release pull request |
+| `.github/actions/tag` | Tag a `bump: release` commit with the version from `.cz.yaml` |
 
-They had to be copied because `apheris/github-actions` is private and cannot be resolved from this
-public repository. Each file documents its provenance and the local deviations, the most relevant
-being that the commitizen plugin is installed from the checkout (`pip install .`) instead of from
-PyPI, so the repository validates and releases itself with the code under review. The upstream
-behaviour of promoting an auto-detected `PATCH` on `main` to `MINOR` was dropped, since this
-project releases patches directly from `main`.
+Both the validation and the changelog action install the commitizen plugin from the checkout
+(`pip install .`), so the repository validates and releases itself with the code under review: a
+change that breaks commit parsing or changelog rendering breaks its own pipeline instead of shipping
+silently.
 
-When the upstream actions change in a relevant way, re-copy them and keep the header comments up to
-date. Third-party actions inside them stay pinned by commit SHA so Renovate can propose updates.
+Third-party actions are pinned by commit SHA so that Renovate can propose updates.
 
 ## Required configuration
 
@@ -60,43 +54,18 @@ date. Third-party actions inside them stay pinned by commit SHA so Renovate can 
 * A GitHub environment named `pypi`. Add required reviewers there if the publish step should be
   manually approved.
 
-No Actions secrets are needed: PyPI is reached through OIDC, and the bump PR, the tag and the
-GitHub release are created with the built-in `GITHUB_TOKEN`.
+No Actions secrets are needed: PyPI is reached through OIDC, and the bump pull request, the tag and
+the GitHub release are created with the built-in `GITHUB_TOKEN`.
 
-## Why no releaser app
+## Notes on signing and triggers
 
-Other Apheris repositories pass the `releaser-apheris` app credentials
-(`RELEASER_APHERIS_APP_ID` / `RELEASER_APHERIS_APP_PRIVATE_KEY`) to these shared actions. Those
-organization secrets have `visibility: selected` and are granted through
-`enable_releaser_app_secret` in `apheris/github-repositories`, where this repository is not
-managed, so they are unavailable here.
-
-This costs less than it sounds:
-
-* The bump commit is **still signed and shows as Verified**. The changelog action commits
-  through [`planetscale/ghcommit-action`](https://github.com/planetscale/ghcommit-action), which
-  uses the GraphQL `createCommitOnBranch` API, and GitHub signs those commits with its own GPG key.
-  The only difference is the author: `github-actions[bot]` instead of the releaser app.
-* The annotated tag object is created through the REST API and is not GPG-signed. That is also true
-  for the repositories that use the app, since the API does not sign tag objects.
-* Tags created with `GITHUB_TOKEN` do not trigger workflows, so tagging, building, publishing and
-  the GitHub release all run as chained jobs in the single `release-publish.yaml` run instead of
+* The bump commit is signed and shows as **Verified**. It is created through the GraphQL
+  `createCommitOnBranch` API, which GitHub signs with its own GPG key. The author is
+  `github-actions[bot]`.
+* The annotated tag object is created through the REST API, which does not GPG-sign tag objects.
+* Tags created with `GITHUB_TOKEN` do not trigger workflows. Tagging, building, publishing and the
+  GitHub release therefore run as chained jobs in a single `release-publish.yaml` run rather than
   being split across a tag-push trigger.
-
-If the repository is added to the Terraform-managed set later, switch both workflows to
-`actions/create-github-app-token` and the `tag` action can then trigger a separate publish workflow.
-
-The Aikido `release-gate` shared action is intentionally not used: it needs the
-`AIKIDO_CLIENT_API_KEY` secret, which is likewise not available here, and it is meant for
-repositories where Renovate continuously uplifts dependencies. Aikido still checks this repository
-through its GitHub App on every pull request.
-
-## Note on bootstrapping
-
-The local changelog and validation actions install the plugin from the checkout (`pip install .`),
-so a release is prepared with the very code that is being released and pull requests are validated
-against the rules they change. If a change breaks commit parsing or changelog rendering, it breaks
-its own release workflow rather than shipping silently.
 
 ## Manual fallback
 

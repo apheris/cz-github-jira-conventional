@@ -1,12 +1,8 @@
 name: Commitizen - Conventional commits validation
 description: "Validates that the commits and PR title respect the conventional commits conventions"
 
-# Vendored copy of apheris/github-actions/validate-conventional-commits@53a666f9 (v4.1.2).
-# That repository is private and cannot be resolved from this public repository, so the action
-# lives here. Differences to upstream:
-#   * the commitizen plugin is installed from this checkout instead of from PyPI, so pull requests
-#     are validated with the rules they are changing
-#   * the Python version is an input instead of an undocumented PYTHON_VERSION env variable
+# Checks the pull request title and all of its commits with `cz check`. The commitizen plugin is
+# installed from this checkout, so pull requests are validated with the rules they are changing.
 
 inputs:
   python-version:
