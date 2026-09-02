@@ -60,8 +60,13 @@ jobs:
     permissions:
       contents: write
     steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Tag release commit
-        uses: apheris/github-actions/tag@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
+        uses: ./.github/actions/tag
         with:
           commit-message: ${{ github.event.head_commit.message }}
           repository: ${{ github.repository }}

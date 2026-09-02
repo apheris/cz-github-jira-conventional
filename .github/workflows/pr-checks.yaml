@@ -15,5 +15,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Validate conventional commits
-        uses: apheris/github-actions/validate-conventional-commits@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
+        uses: ./.github/actions/validate-conventional-commits

@@ -1,0 +1,152 @@
+name: Generate Changelog - Python Commitizen
+description: "Bump the version, generate the changelog and open a release pull request"
+
+# Vendored copy of apheris/github-actions/generate-changelog/python-commitizen@53a666f9 (v4.1.2).
+# That repository is private and cannot be resolved from this public repository, so the action
+# lives here. Differences to upstream:
+#   * the commitizen plugin is installed from this checkout instead of from PyPI, so the release is
+#     prepared with the version of the plugin that is about to be released
+#   * the token defaults to the caller's GITHUB_TOKEN (the releaser-apheris app secrets are not
+#     available to this repository); commits are still signed because they are created through the
+#     GraphQL API by planetscale/ghcommit-action
+
+inputs:
+  increment-type:
+    description: Type of semver increment to perform
+    required: false
+    default: "auto"
+  base-branch:
+    description: The base branch for the PR to be compared to
+    required: false
+    default: "main"
+  commitizen-version:
+    description: The commitizen version to use
+    required: false
+    default: "4.8.2"
+  python-version:
+    description: The Python version to use
+    required: false
+    default: "3.11"
+  token:
+    description: The GitHub token
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check out repo with tags
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ inputs.base-branch }}
+        fetch-depth: 0
+
+    - name: Setup python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install commitizen
+      shell: bash
+      env:
+        COMMITIZEN_VERSION: ${{ inputs.commitizen-version }}
+      run: |
+        pip install "commitizen==$COMMITIZEN_VERSION" .
+
+    - name: Setup git user
+      uses: fregante/setup-git-user@024bc0b8e177d7e77203b48dab6fb45666854b35 # v2.0.2
+
+    # experimental versions may only be created from experimental-* branches
+    - name: Ensure we are in an experimental branch if the increment-type is experimental
+      if: inputs.increment-type == 'experimental' && !startsWith(inputs.base-branch, 'experimental-')
+      shell: bash
+      run: |
+        echo "::error::You must be in an experimental branch to create an experimental version. Aborting."
+        exit 1
+
+    - name: Generate new experimental version commit
+      if: inputs.increment-type == 'experimental'
+      shell: bash
+      run: echo "INCREMENT_ARG=--prerelease alpha" >> $GITHUB_ENV
+
+    # release candidates may only be created from main or patch-release-* branches
+    - name: Ensure we are in main or a patch-release branch if the increment-type is release-candidate
+      if: inputs.increment-type == 'release-candidate' && inputs.base-branch != 'main' && !startsWith(inputs.base-branch, 'patch-release-')
+      shell: bash
+      run: |
+        echo "::error::You must be in main or a patch-release branch to create a release candidate version. Aborting."
+        exit 1
+
+    - name: Generate new release candidate version commit
+      if: inputs.increment-type == 'release-candidate'
+      shell: bash
+      run: echo "INCREMENT_ARG=--prerelease rc" >> $GITHUB_ENV
+
+    - name: Sets parameter for the --increment flag
+      if: contains(fromJSON('["MAJOR", "MINOR", "PATCH"]'), inputs.increment-type)
+      shell: bash
+      env:
+        INCREMENT_TYPE: ${{ inputs.increment-type }}
+      run: echo "INCREMENT_ARG=--increment $INCREMENT_TYPE" >> $GITHUB_ENV
+
+    - name: Generate changelog
+      shell: bash
+      run: |
+        cz bump --files-only --changelog --yes --version-scheme semver2 ${{ env.INCREMENT_ARG }}
+
+    - name: Next version tag
+      shell: bash
+      run: echo "NEXT_VERSION_TAG=$(cz version --project)" >> $GITHUB_ENV
+
+    - name: Set new branch name
+      shell: bash
+      run: echo "CHANGELOG_BRANCH=update-changelog-${{ env.NEXT_VERSION_TAG }}" >> $GITHUB_ENV
+
+    - name: Get HEAD from remote base branch
+      shell: bash
+      env:
+        BASE_BRANCH: ${{ inputs.base-branch }}
+      run: echo "BASE_BRANCH_SHA=$(git rev-parse origin/$BASE_BRANCH)" >> $GITHUB_ENV
+
+    # Workaround for https://github.com/actions/runner/issues/667: the only way to get a signed
+    # commit from the Actions user is to create it through the API. So we create the branch, commit
+    # the locally generated changes to it through the API, and then open the pull request.
+    - name: Create branch on remote
+      uses: peterjgrainger/action-create-branch@4b81ce657e255acd677cc6c55c9c763654be3aef # v4.0.0
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        branch: ${{ env.CHANGELOG_BRANCH }}
+        sha: ${{ env.BASE_BRANCH_SHA }}
+
+    - name: Commit local changes to target branch
+      uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        commit_message: "bump: release ${{ env.NEXT_VERSION_TAG }}"
+        repo: ${{ github.repository }}
+        branch: ${{ env.CHANGELOG_BRANCH }}
+
+    - name: Create Pull Request
+      id: create-pull-request
+      uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+      with:
+        token: ${{ inputs.token }}
+        title: "bump: release ${{ env.NEXT_VERSION_TAG }}"
+        body: Bumps the project version to ${{ env.NEXT_VERSION_TAG }} and updates the changelog to reflect the corresponding changes.
+        branch: ${{ env.CHANGELOG_BRANCH }}
+        base: ${{ inputs.base-branch }}
+
+    - name: Add some outputs to job summary
+      if: ${{ steps.create-pull-request.outputs.pull-request-number }}
+      shell: bash
+      run: |
+        echo "Pull request [#${{ steps.create-pull-request.outputs.pull-request-number }}](${{ steps.create-pull-request.outputs.pull-request-url }}) created." >> $GITHUB_STEP_SUMMARY
+
+    - name: Delete created branch if job fails
+      uses: dawidd6/action-delete-branch@d1efac9a6f7a9b408d4e8ff663a99c1fbac17b3f # v3.1.0
+      if: failure()
+      with:
+        soft_fail: true
+        github_token: ${{ inputs.token }}
+        branches: ${{ env.CHANGELOG_BRANCH }}

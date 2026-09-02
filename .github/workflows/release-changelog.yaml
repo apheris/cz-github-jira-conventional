@@ -33,8 +33,13 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Generate changelog and open release PR
-        uses: apheris/github-actions/generate-changelog/python-commitizen@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
+        uses: ./.github/actions/generate-changelog
         with:
           increment-type: ${{ inputs.increment-type }}
           base-branch: ${{ inputs.base-branch }}

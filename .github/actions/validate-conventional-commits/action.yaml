@@ -1,0 +1,54 @@
+name: Commitizen - Conventional commits validation
+description: "Validates that the commits and PR title respect the conventional commits conventions"
+
+# Vendored copy of apheris/github-actions/validate-conventional-commits@53a666f9 (v4.1.2).
+# That repository is private and cannot be resolved from this public repository, so the action
+# lives here. Differences to upstream:
+#   * the commitizen plugin is installed from this checkout instead of from PyPI, so pull requests
+#     are validated with the rules they are changing
+#   * the Python version is an input instead of an undocumented PYTHON_VERSION env variable
+
+inputs:
+  python-version:
+    description: The Python version to use
+    required: false
+    default: "3.11"
+  commitizen-version:
+    description: The commitizen version to use
+    required: false
+    default: "4.8.2"
+
+runs:
+  using: "composite"
+
+  steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Setup Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install dependencies
+      shell: bash
+      env:
+        COMMITIZEN_VERSION: ${{ inputs.commitizen-version }}
+      run: |
+        pip install "commitizen==$COMMITIZEN_VERSION" .
+
+    - name: Check PR title to be commitizen compliant
+      shell: bash
+      env:
+        PR_TITLE: ${{ github.event.pull_request.title }}
+      run: cz check --message "$PR_TITLE"
+
+    - name: Check PR commits to be commitizen compliant
+      if: success() || failure()
+      shell: bash
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: cz check --rev-range "$BASE_SHA..$HEAD_SHA"
