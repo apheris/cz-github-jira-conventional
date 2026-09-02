@@ -51,20 +51,25 @@ GitHub release are created with the built-in `GITHUB_TOKEN`.
 ## Why no releaser app
 
 Other Apheris repositories pass the `releaser-apheris` app credentials
-(`RELEASER_APHERIS_APP_ID` / `RELEASER_APHERIS_APP_PRIVATE_KEY`) to these shared actions, which
-gives signed bump commits and a tag push that can trigger further workflows. Those organization
-secrets have `visibility: selected` and are granted through `enable_releaser_app_secret` in
-`apheris/github-repositories`, where this repository is not managed, so they are unavailable here.
+(`RELEASER_APHERIS_APP_ID` / `RELEASER_APHERIS_APP_PRIVATE_KEY`) to these shared actions. Those
+organization secrets have `visibility: selected` and are granted through
+`enable_releaser_app_secret` in `apheris/github-repositories`, where this repository is not
+managed, so they are unavailable here.
 
-Consequences:
+This costs less than it sounds:
 
-* The bump commit is not signed.
+* The bump commit is **still signed and shows as Verified**. The shared changelog action commits
+  through [`planetscale/ghcommit-action`](https://github.com/planetscale/ghcommit-action), which
+  uses the GraphQL `createCommitOnBranch` API, and GitHub signs those commits with its own GPG key.
+  The only difference is the author: `github-actions[bot]` instead of the releaser app.
+* The annotated tag object is created through the REST API and is not GPG-signed. That is also true
+  for the repositories that use the app, since the API does not sign tag objects.
 * Tags created with `GITHUB_TOKEN` do not trigger workflows, so tagging, building, publishing and
   the GitHub release all run as chained jobs in the single `release-publish.yaml` run instead of
   being split across a tag-push trigger.
 
-If the repository is added to the Terraform-managed set later, switch both workflows back to
-`actions/create-github-app-token` and the `tag` action can trigger a separate publish workflow.
+If the repository is added to the Terraform-managed set later, switch both workflows to
+`actions/create-github-app-token` and the `tag` action can then trigger a separate publish workflow.
 
 The Aikido `release-gate` shared action is intentionally not used: it needs the
 `AIKIDO_CLIENT_API_KEY` secret, which is likewise not available here, and it is meant for
