@@ -18,6 +18,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       do-release: ${{ steps.release-check.outputs.do-release }}
       tag: ${{ steps.version.outputs.tag }}
@@ -77,6 +79,8 @@ jobs:
     needs: [prepare, tag]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,6 +111,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/cz_github_jira_conventional
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7.0.0
