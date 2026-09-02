@@ -74,6 +74,12 @@ Install the hook with
 pre-commit install --hook-type commit-msg
 ```
 
+<!-- CONTRIBUTING -->
+## Contributing
+
+See [docs/releasing.md](https://github.com/apheris/cz-github-jira-conventional/blob/main/docs/releasing.md)
+for how releases of this package are created.
+
 <!-- LICENSE -->
 ## License
 

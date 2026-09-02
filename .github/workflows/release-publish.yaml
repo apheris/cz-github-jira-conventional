@@ -1,0 +1,133 @@
+name: Release - tag & publish
+
+# Step 2 of the release process (automatic).
+#  * push to main with a "bump: release ..." commit -> create the vX.Y.Z tag
+#    (created with an app token so that the tag push triggers this workflow again)
+#  * push of a vX.Y.Z tag                          -> build, publish to PyPI, create GitHub release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions: {}
+
+jobs:
+  tag:
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Get token
+        id: app-token
+        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
+        with:
+          # organizational secrets
+          app-id: ${{ secrets.RELEASER_APHERIS_APP_ID }}
+          private-key: ${{ secrets.RELEASER_APHERIS_APP_PRIVATE_KEY }}
+
+      - name: Tag release commit
+        uses: apheris/github-actions/tag@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
+        with:
+          commit-message: ${{ github.event.head_commit.message }}
+          repository: ${{ github.repository }}
+          token: ${{ steps.app-token.outputs.token }}
+          file-path: ".cz.yaml"
+
+  build:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Check that the tag matches the packaged version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=$(python -c "import re,pathlib;print(re.search(r'version=\"([^\"]+)\"', pathlib.Path('setup.py').read_text()).group(1))")
+          if [ "v$version" != "$REF_NAME" ]; then
+            echo "::error::setup.py version is $version but the tag is $REF_NAME."
+            exit 1
+          fi
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Check the artifacts
+        run: |
+          python -m pip install twine
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Configure the trusted publisher on PyPI (project -> Publishing) with
+    # workflow "release-publish.yaml" and environment "pypi". No API token needed.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/cz_github_jira_conventional
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+
+  github-release:
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract the changelog section for this release
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          awk -v tag="## $REF_NAME " 'index($0, tag)==1 {found=1; next} found && /^## / {exit} found {print}' \
+            CHANGELOG.md > release-notes.md
+          cat release-notes.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          case "$REF_NAME" in
+            *-rc.*|*-alpha.*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$REF_NAME" dist/* \
+            --title "$REF_NAME" \
+            --notes-file release-notes.md \
+            $prerelease

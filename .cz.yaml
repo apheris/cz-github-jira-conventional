@@ -6,3 +6,6 @@ commitizen:
   name: cz_github_jira_conventional
   tag_format: v$version
   version: 3.0.2
+  version_scheme: semver2
+  version_files:
+    - setup.py:version

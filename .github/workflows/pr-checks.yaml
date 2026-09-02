@@ -1,0 +1,19 @@
+name: PR checks
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions: {}
+
+jobs:
+  commitizen-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate conventional commits
+        uses: apheris/github-actions/validate-conventional-commits@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
