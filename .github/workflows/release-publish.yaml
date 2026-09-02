@@ -1,43 +1,75 @@
 name: Release - tag & publish
 
 # Step 2 of the release process (automatic).
-#  * push to main with a "bump: release ..." commit -> create the vX.Y.Z tag
-#    (created with an app token so that the tag push triggers this workflow again)
-#  * push of a vX.Y.Z tag                          -> build, publish to PyPI, create GitHub release
+# Triggered by a "bump: release vX.Y.Z" commit landing on main, it tags the commit, builds the
+# distributions, publishes them to PyPI and creates the GitHub release.
+#
+# Everything runs in this single workflow run on purpose: the tag is created with the built-in
+# GITHUB_TOKEN, and tags created with that token do not trigger further workflow runs.
 
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
 
 permissions: {}
 
 jobs:
-  tag:
-    if: startsWith(github.ref, 'refs/heads/')
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    outputs:
+      do-release: ${{ steps.release-check.outputs.do-release }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
-      - name: Get token
-        id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
-        with:
-          # organizational secrets
-          app-id: ${{ secrets.RELEASER_APHERIS_APP_ID }}
-          private-key: ${{ secrets.RELEASER_APHERIS_APP_PRIVATE_KEY }}
+      - name: Check commit message for release indication
+        id: release-check
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          header=$(echo "$COMMIT_MESSAGE" | head -1)
+          echo "Commit header found: $header"
+          if [[ "$header" =~ ^bump:[[:space:]]release.*$ ]]; then
+            echo "do-release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No release bump detected."
+          fi
 
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.release-check.outputs.do-release
+        with:
+          persist-credentials: false
+
+      - name: Read the version to release
+        id: version
+        if: steps.release-check.outputs.do-release
+        run: |
+          version=$(yq '.commitizen.version' .cz.yaml)
+          setup_version=$(python3 -c "import re,pathlib;print(re.search(r'version=\"([^\"]+)\"', pathlib.Path('setup.py').read_text()).group(1))")
+          if [ "$version" != "$setup_version" ]; then
+            echo "::error::.cz.yaml says $version but setup.py says $setup_version."
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  tag:
+    needs: prepare
+    if: needs.prepare.outputs.do-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
       - name: Tag release commit
         uses: apheris/github-actions/tag@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
         with:
           commit-message: ${{ github.event.head_commit.message }}
           repository: ${{ github.repository }}
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           file-path: ".cz.yaml"
 
   build:
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [prepare, tag]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -49,24 +81,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Check that the tag matches the packaged version
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          version=$(python -c "import re,pathlib;print(re.search(r'version=\"([^\"]+)\"', pathlib.Path('setup.py').read_text()).group(1))")
-          if [ "v$version" != "$REF_NAME" ]; then
-            echo "::error::setup.py version is $version but the tag is $REF_NAME."
-            exit 1
-          fi
-
       - name: Build sdist and wheel
         run: |
-          python -m pip install --upgrade pip build
+          python -m pip install --upgrade pip build twine
           python -m build
-
-      - name: Check the artifacts
-        run: |
-          python -m pip install twine
           python -m twine check dist/*
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -95,7 +113,7 @@ jobs:
         uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
 
   github-release:
-    needs: publish-pypi
+    needs: [prepare, publish-pypi]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -112,22 +130,22 @@ jobs:
 
       - name: Extract the changelog section for this release
         env:
-          REF_NAME: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          awk -v tag="## $REF_NAME " 'index($0, tag)==1 {found=1; next} found && /^## / {exit} found {print}' \
+          awk -v tag="## $TAG " 'index($0, tag)==1 {found=1; next} found && /^## / {exit} found {print}' \
             CHANGELOG.md > release-notes.md
           cat release-notes.md
 
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REF_NAME: ${{ github.ref_name }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           prerelease=""
-          case "$REF_NAME" in
+          case "$TAG" in
             *-rc.*|*-alpha.*) prerelease="--prerelease" ;;
           esac
-          gh release create "$REF_NAME" dist/* \
-            --title "$REF_NAME" \
+          gh release create "$TAG" dist/* \
+            --title "$TAG" \
             --notes-file release-notes.md \
             $prerelease

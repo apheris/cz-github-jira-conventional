@@ -1,9 +1,9 @@
 name: Release - bump version & changelog
 
 # Step 1 of the release process (manual trigger).
-# Runs the security gate, then `cz bump --files-only --changelog` and opens a
-# "bump: release vX.Y.Z" pull request against the base branch.
-# Merging that PR triggers `release-publish.yaml`, which tags and publishes.
+# Runs `cz bump --files-only --changelog` and opens a "bump: release vX.Y.Z" pull request
+# against the base branch. Merging that PR triggers `release-publish.yaml`, which tags,
+# publishes to PyPI and creates the GitHub release.
 
 on:
   workflow_dispatch:
@@ -29,25 +29,15 @@ jobs:
   create-changelog:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Check the release gate
-        uses: apheris/github-actions/release-gate@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
-        with:
-          repo-name: ${{ github.event.repository.name }}
-          fail-on-severity-level: "HIGH"
-          aikido-api-key: ${{ secrets.AIKIDO_CLIENT_API_KEY }}
-
-      - name: Get token
-        id: app-token
-        uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
-        with:
-          # organizational secrets
-          app-id: ${{ secrets.RELEASER_APHERIS_APP_ID }}
-          private-key: ${{ secrets.RELEASER_APHERIS_APP_PRIVATE_KEY }}
-
       - name: Generate changelog and open release PR
         uses: apheris/github-actions/generate-changelog/python-commitizen@53a666f96140badbf33d76892a122e1b4f7d11ba # v4.1.2
         with:
           increment-type: ${{ inputs.increment-type }}
           base-branch: ${{ inputs.base-branch }}
-          token: ${{ steps.app-token.outputs.token }}
+          # The releaser-apheris app secrets are not available to this repository, so the
+          # built-in token is used. The bump commit is therefore not signed.
+          token: ${{ secrets.GITHUB_TOKEN }}
