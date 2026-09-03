@@ -27,9 +27,9 @@ as GitHub pre-releases.
 
 | File | Trigger | Purpose |
 | --- | --- | --- |
-| `.github/workflows/pr-checks.yaml` | pull request | Validate the conventional commit messages |
+| `.github/workflows/pr-checks.yaml` | pull request or explicit release-PR dispatch | Validate the conventional commit messages |
 | `.github/workflows/release-changelog.yaml` | manual | Version bump, changelog, release PR |
-| `.github/workflows/release-publish.yaml` | push to `main` | Tag the release commit, build, publish to PyPI, create the GitHub release |
+| `.github/workflows/release-publish.yaml` | push to `main`, `patch-release-*` or `experimental-*` | Tag the release commit, build, publish to PyPI, create the GitHub release |
 
 The workflow steps live in local composite actions:
 
@@ -55,7 +55,9 @@ Third-party actions are pinned by commit SHA so that Renovate can propose update
   manually approved.
 
 No Actions secrets are needed: PyPI is reached through OIDC, and the bump pull request, the tag and
-the GitHub release are created with the built-in `GITHUB_TOKEN`.
+the GitHub release are created with the built-in `GITHUB_TOKEN`. Because pull requests created with
+that token do not emit `pull_request` events, the changelog action explicitly dispatches
+`pr-checks.yaml` for the generated release branch.
 
 ## Notes on signing and triggers
 

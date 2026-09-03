@@ -13,6 +13,15 @@ inputs:
     description: The commitizen version to use
     required: false
     default: "4.8.2"
+  pr-title:
+    description: Pull request title
+    required: true
+  base-sha:
+    description: Base branch commit SHA
+    required: true
+  head-sha:
+    description: Pull request head commit SHA
+    required: true
 
 runs:
   using: "composite"
@@ -38,13 +47,13 @@ runs:
     - name: Check PR title to be commitizen compliant
       shell: bash
       env:
-        PR_TITLE: ${{ github.event.pull_request.title }}
+        PR_TITLE: ${{ inputs.pr-title }}
       run: cz check --message "$PR_TITLE"
 
     - name: Check PR commits to be commitizen compliant
       if: success() || failure()
       shell: bash
       env:
-        BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        BASE_SHA: ${{ inputs.base-sha }}
+        HEAD_SHA: ${{ inputs.head-sha }}
       run: cz check --rev-range "$BASE_SHA..$HEAD_SHA"

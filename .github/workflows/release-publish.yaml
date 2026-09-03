@@ -1,8 +1,8 @@
 name: Release - tag & publish
 
 # Step 2 of the release process (automatic).
-# Triggered by a "bump: release vX.Y.Z" commit landing on main, it tags the commit, builds the
-# distributions, publishes them to PyPI and creates the GitHub release.
+# Triggered by a "bump: release vX.Y.Z" commit landing on a supported release branch, it tags the
+# commit, builds the distributions, publishes them to PyPI and creates the GitHub release.
 #
 # Everything runs in this single workflow run on purpose: the tag is created with the built-in
 # GITHUB_TOKEN, and tags created with that token do not trigger further workflow runs.
@@ -11,6 +11,8 @@ on:
   push:
     branches:
       - main
+      - "patch-release-*"
+      - "experimental-*"
 
 permissions: {}
 
@@ -114,7 +116,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: dist
           path: dist/
@@ -133,7 +135,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v7.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: dist
           path: dist/
