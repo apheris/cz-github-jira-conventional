@@ -1,0 +1,46 @@
+name: PR checks
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+  # Release PRs are created with GITHUB_TOKEN, which suppresses pull_request events. The
+  # changelog workflow dispatches this workflow explicitly so those PRs receive the same checks.
+  workflow_dispatch:
+    inputs:
+      pr-title:
+        description: Pull request title
+        required: true
+        type: string
+      base-sha:
+        description: Base branch commit SHA
+        required: true
+        type: string
+      head-sha:
+        description: Pull request head commit SHA
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  commitizen-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate conventional commits
+        uses: ./.github/actions/validate-conventional-commits
+        with:
+          pr-title: ${{ github.event.pull_request.title || inputs.pr-title }}
+          base-sha: ${{ github.event.pull_request.base.sha || inputs.base-sha }}
+          head-sha: ${{ github.event.pull_request.head.sha || inputs.head-sha }}

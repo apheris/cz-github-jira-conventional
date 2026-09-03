@@ -1,0 +1,163 @@
+name: Release - tag & publish
+
+# Step 2 of the release process (automatic).
+# Triggered by a "bump: release vX.Y.Z" commit landing on a supported release branch, it tags the
+# commit, builds the distributions, publishes them to PyPI and creates the GitHub release.
+#
+# Everything runs in this single workflow run on purpose: the tag is created with the built-in
+# GITHUB_TOKEN, and tags created with that token do not trigger further workflow runs.
+
+on:
+  push:
+    branches:
+      - main
+      - "patch-release-*"
+      - "experimental-*"
+
+permissions: {}
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      do-release: ${{ steps.release-check.outputs.do-release }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Check commit message for release indication
+        id: release-check
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          header=$(echo "$COMMIT_MESSAGE" | head -1)
+          echo "Commit header found: $header"
+          if [[ "$header" =~ ^bump:[[:space:]]release.*$ ]]; then
+            echo "do-release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No release bump detected."
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.release-check.outputs.do-release
+        with:
+          persist-credentials: false
+
+      - name: Read the version to release
+        id: version
+        if: steps.release-check.outputs.do-release
+        run: |
+          version=$(yq '.commitizen.version' .cz.yaml)
+          setup_version=$(python3 -c "import re,pathlib;print(re.search(r'version=\"([^\"]+)\"', pathlib.Path('setup.py').read_text()).group(1))")
+          if [ "$version" != "$setup_version" ]; then
+            echo "::error::.cz.yaml says $version but setup.py says $setup_version."
+            exit 1
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+  tag:
+    needs: prepare
+    if: needs.prepare.outputs.do-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Tag release commit
+        uses: ./.github/actions/tag
+        with:
+          commit-message: ${{ github.event.head_commit.message }}
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          file-path: ".cz.yaml"
+
+  build:
+    needs: [prepare, tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check dist/*
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Configure the trusted publisher on PyPI (project -> Publishing) with
+    # workflow "release-publish.yaml" and environment "pypi". No API token needed.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/cz_github_jira_conventional
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+
+  github-release:
+    needs: [prepare, publish-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: dist
+          path: dist/
+
+      - name: Extract the changelog section for this release
+        env:
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          awk -v tag="## $TAG " 'index($0, tag)==1 {found=1; next} found && /^## / {exit} found {print}' \
+            CHANGELOG.md > release-notes.md
+          cat release-notes.md
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          prerelease=""
+          case "$TAG" in
+            *-rc.*|*-alpha.*) prerelease="--prerelease" ;;
+          esac
+          gh release create "$TAG" dist/* \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            $prerelease

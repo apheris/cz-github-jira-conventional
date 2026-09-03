@@ -1,0 +1,50 @@
+name: Release - bump version & changelog
+
+# Step 1 of the release process (manual trigger).
+# Runs `cz bump --files-only --changelog` and opens a "bump: release vX.Y.Z" pull request
+# against the base branch. Merging that PR triggers `release-publish.yaml`, which tags,
+# publishes to PyPI and creates the GitHub release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment-type:
+        type: choice
+        description: Type of semver increment to perform
+        default: auto
+        options:
+          - auto
+          - PATCH
+          - MINOR
+          - MAJOR
+          - release-candidate
+          - experimental
+      base-branch:
+        description: The base branch for the PR to be compared to
+        default: "main"
+
+permissions: {}
+
+jobs:
+  create-changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      # needed so that the local composite action below can be resolved
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate changelog and open release PR
+        uses: ./.github/actions/generate-changelog
+        with:
+          increment-type: ${{ inputs.increment-type }}
+          base-branch: ${{ inputs.base-branch }}
+          # The commit is signed even though the built-in token is used: the action commits
+          # through the GraphQL API, and GitHub signs those commits with its own GPG key.
+          # The commit is authored by github-actions[bot].
+          token: ${{ secrets.GITHUB_TOKEN }}

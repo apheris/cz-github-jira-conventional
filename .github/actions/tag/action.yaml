@@ -1,0 +1,105 @@
+name: Tag release commits
+description: "Tag a release commit with the version found in the commitizen configuration file"
+
+# Checks whether a commit is a release commit ("bump: release ..."), reads the version from the
+# commitizen configuration file and creates the matching annotated tag through the GitHub API.
+
+inputs:
+  commit-message:
+    description: "Commit message to check for release indication"
+    required: true
+  repository:
+    description: "The repository to tag"
+    required: true
+  token:
+    description: "The token to use for steps that require it"
+    required: true
+  file-path:
+    description: "The path to the file to extract the version from"
+    required: true
+    default: ".cz.yaml"
+
+outputs:
+  tag:
+    description: "The tag that was created, empty if the commit is not a release commit"
+    value: ${{ steps.get-release-version.outputs.tag }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check commit message for release indication
+      shell: bash
+      id: release-check
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+      run: |
+        header=$(echo "$COMMIT_MESSAGE" | head -1)
+        echo "Commit header found: $header"
+        if [[ "$header" =~ ^bump:[[:space:]]release.*$ ]]; then
+          echo "::notice::Release bump detected."
+          echo "do-release=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::No release bump detected."
+        fi
+
+    - name: Checkout repository
+      if: ${{ !cancelled() && steps.release-check.outputs.do-release }}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Get release version
+      shell: bash
+      id: get-release-version
+      if: ${{ !cancelled() && steps.release-check.outputs.do-release }}
+      env:
+        FILE_PATH: ${{ inputs.file-path }}
+      run: |
+        version=$(yq '.commitizen.version' "$FILE_PATH")
+        if [[ -n "$version" ]]; then
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-alpha\.[0-9]+|-rc\.[0-9]+)?$ ]]; then
+            echo "::notice::Version found on the $FILE_PATH file is $version. Tagging with v$version."
+            echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Version found on the $FILE_PATH is $version, which does not match a X.Y.Z, X.Y.Z-alpha.N, or X.Y.Z-rc.N tag."
+            exit 1
+          fi
+        else
+            echo "::error::Version not found on the $FILE_PATH file."
+            exit 1
+        fi
+
+    - name: Create tag
+      if: ${{ !cancelled() && steps.get-release-version.outputs.tag }}
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          try {
+            tagResult = await github.rest.git.createTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: '${{ steps.get-release-version.outputs.tag }}',
+              message: 'Release ${{ steps.get-release-version.outputs.tag }}',
+              object: context.sha,
+              type: 'commit',
+            });
+            console.info('Tag object for %s created with SHA %s.', tagResult.data.tag, tagResult.data.sha);
+
+            refResult = await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ steps.get-release-version.outputs.tag }}',
+              sha: tagResult.data.sha,
+            });
+            console.info('Reference for %s created.', refResult.data.ref);
+          } catch (error) {
+            core.setFailed(error.message);
+          }
+
+    - name: Print tag to job summary
+      shell: bash
+      if: ${{ success() && steps.get-release-version.outputs.tag }}
+      env:
+        REPO: ${{ inputs.repository }}
+      run: echo "Tag [${{ steps.get-release-version.outputs.tag }}](https://github.com/$REPO/releases/tag/${{ steps.get-release-version.outputs.tag }}) created." >> $GITHUB_STEP_SUMMARY
