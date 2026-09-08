@@ -7,6 +7,19 @@ This plugin extends the commitizen tools by:
 - **create links to GitHub** commits in the CHANGELOG.md
 - **create links to Jira** issues in the CHANGELOG.md
 
+The Jira issue ID is required both when creating a commit with `cz commit` and
+when linting an existing message with `cz check`: a scope may be omitted, but if
+it is present it has to be a comma-separated list of Jira issue IDs matching the
+configured `jira_prefix`. This keeps the changelog links valid, since every scope
+is rendered as `<jira_base_url>/browse/<scope>`.
+
+```
+> cz check --message "fix(XX-42): correct minor typos in code"
+Commit validation: successful!
+> cz check --message "fix(typos): correct minor typos in code"
+commit validation: failed!
+```
+
 When you call commitizen `commit` you will be required you to enter the scope of your commit as a Jira issue id (or multiple issue ids, prefixed or without prefix, see config below).
 ```
 > cz commit

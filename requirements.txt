@@ -1,6 +1,7 @@
-questionary==1.10.0
-black==26.3.1
-pre-commit==3.3.3
-twine==4.0.2
-setuptools==83.0.0
+black==26.5.1
+pre-commit==4.6.2
+pytest==9.1.1
+questionary==2.1.1
+setuptools==84.0.0
+twine==7.0.0
 wheel==0.48.0
