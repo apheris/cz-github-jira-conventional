@@ -183,7 +183,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def parse_scope(self, text):
         """
-        Require and validate the scope to be Jira ids.
+        Require and validate the scope to be Jira IDs.
         """
         if self.jira_prefix:
             issueRE = re.compile(r"\d+")
@@ -248,11 +248,11 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def issue_pattern(self) -> str:
         """
-        Pattern that a single Jira issue id in the scope has to match.
+        Pattern that a single Jira issue ID in the scope has to match.
 
         Mirrors the validation of `parse_scope`, which is only applied to the
         answers of the interactive `cz commit` prompt: if a prefix is configured,
-        `message()` prepends it when building the commit message, so the id must be
+        `message()` prepends it when building the commit message, so the ID must be
         prefix + number; otherwise the user has to write the prefix themselves.
         """
         if self.jira_prefix:
@@ -267,8 +267,8 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def schema_pattern(self) -> str:
         issue = self.issue_pattern()
-        # The scope is optional, but if it is present it must be a comma
-        # separated list of Jira issue ids, because the changelog renders every
+        # The scope is optional, but if it is present it must be a
+        # comma-separated list of Jira issue IDs, because the changelog renders every
         # scope as a link to `<jira_base_url>/browse/<scope>`. Keep the number
         # of capturing groups at three, `process_commit` reads group 3.
         PATTERN = (
@@ -298,11 +298,10 @@ class GithubJiraConventionalCz(BaseCommitizen):
         rev = commit.rev
         m = parsed_message["message"]
         if parsed_message["scope"]:
+            issue_ids = [issue.strip() for issue in parsed_message["scope"].split(",")]
             parsed_message["scope"] = " ".join(
-                [
-                    f"[{issue_id}]({self.jira_base_url}/browse/{issue_id})"
-                    for issue_id in parsed_message["scope"].split(",")
-                ]
+                f"[{issue_id}]({self.jira_base_url}/browse/{issue_id})"
+                for issue_id in issue_ids
             )
         parsed_message["message"] = (
             f"{m} [{rev[:5]}]({self.github_base_url}/{self.github_repo}/commit/{commit.rev})"
