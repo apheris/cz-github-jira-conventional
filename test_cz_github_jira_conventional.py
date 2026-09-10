@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from commitizen import config
+from commitizen import config, git
 
 from cz_github_jira_conventional import GithubJiraConventionalCz
 
@@ -45,6 +45,27 @@ def test_valid_messages(cz, message):
 )
 def test_invalid_messages(cz, message):
     assert not check(cz, message)
+
+
+@pytest.mark.parametrize("separator", [",", ", ", ",\t"])
+def test_changelog_trims_jira_issue_ids(cz, separator):
+    scope = separator.join(["XX-42", "XX-123", "XX-456"])
+    message = f"feat({scope}): allow multiple issues"
+    assert check(cz, message)
+    parsed_message = re.match(cz.commit_parser, message).groupdict()
+    commit = git.GitCommit(rev="abcdef123456", title=message)
+
+    result = cz.changelog_message_builder_hook(parsed_message, commit)
+
+    assert result["scope"] == (
+        f"[XX-42]({cz.jira_base_url}/browse/XX-42) "
+        f"[XX-123]({cz.jira_base_url}/browse/XX-123) "
+        f"[XX-456]({cz.jira_base_url}/browse/XX-456)"
+    )
+    assert result["message"] == (
+        f"allow multiple issues [abcde]"
+        f"({cz.github_base_url}/{cz.github_repo}/commit/abcdef123456)"
+    )
 
 
 def test_process_commit_still_returns_the_message(cz):
