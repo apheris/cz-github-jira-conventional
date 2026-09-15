@@ -274,7 +274,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
         # of capturing groups at three, `process_commit` reads group 3.
         PATTERN = (
             r"(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert|bump)"
-            rf"(\({issue}(?:,\s?{issue})*\))?!?:(\s.*)"
+            rf"(\({issue}(?:,[ \t]?{issue})*\))?!?:(\s.*)"
         )
         return PATTERN
 
