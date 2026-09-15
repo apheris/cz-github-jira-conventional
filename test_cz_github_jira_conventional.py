@@ -47,6 +47,13 @@ def test_invalid_messages(cz, message):
     assert not check(cz, message)
 
 
+@pytest.mark.parametrize(
+    "whitespace", ["\n", "\r", "\r\n", "\v", "\f", "\u0085", "\u2028", "\u2029"]
+)
+def test_scope_rejects_line_breaks_after_comma(cz, whitespace):
+    assert not check(cz, f"fix(XX-42,{whitespace}XX-123): reject multiline scopes")
+
+
 @pytest.mark.parametrize("separator", [",", ", ", ",\t"])
 def test_changelog_trims_jira_issue_ids(cz, separator):
     scope = separator.join(["XX-42", "XX-123", "XX-456"])
