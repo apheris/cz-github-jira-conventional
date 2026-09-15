@@ -183,7 +183,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
 
     def parse_scope(self, text):
         """
-        Require and validate the scope to be Jira IDs.
+        Validate a supplied scope as Jira IDs; allow an empty scope.
         """
         if self.jira_prefix:
             issueRE = re.compile(r"\d+")
@@ -213,6 +213,7 @@ class GithubJiraConventionalCz(BaseCommitizen):
         footer = answers["footer"]
         is_breaking_change = answers["is_breaking_change"]
 
+        scope = ""
         if issues:
             # Add Jira prefixes to the issue numbers.
             issues_str = ",".join([issue_jira_prefix + i for i in issues])

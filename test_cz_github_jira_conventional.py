@@ -68,6 +68,39 @@ def test_changelog_trims_jira_issue_ids(cz, separator):
     )
 
 
+@pytest.mark.parametrize(
+    "jira_prefix, selected_prefix, scope_input, expected_scope",
+    [
+        ("XX-", None, "", ""),
+        ("", None, "", ""),
+        (["XX-", "XY-"], "XY-", "", ""),
+        ("XX-", None, "42, 123", "(XX-42,XX-123)"),
+        ("", None, "XX-42, XY-123", "(XX-42,XY-123)"),
+        (["XX-", "XY-"], "XY-", "42, 123", "(XY-42,XY-123)"),
+    ],
+)
+def test_wizard_renders_optional_jira_scope(
+    cz, monkeypatch, jira_prefix, selected_prefix, scope_input, expected_scope
+):
+    monkeypatch.setattr(cz, "jira_prefix", jira_prefix)
+    scope_question = next(q for q in cz.questions() if q["name"] == "scope")
+    answers = {
+        "prefix": "fix",
+        "scope": scope_question["filter"](scope_input),
+        "subject": "correct minor typos in code",
+        "body": "",
+        "footer": "",
+        "is_breaking_change": False,
+    }
+    if selected_prefix is not None:
+        answers["issue_jira_prefix"] = selected_prefix
+
+    message = cz.message(answers)
+
+    assert message == f"fix{expected_scope}: correct minor typos in code"
+    assert check(cz, message)
+
+
 def test_process_commit_still_returns_the_message(cz):
     assert (
         cz.process_commit("fix(XX-42): correct minor typos in code")

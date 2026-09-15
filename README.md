@@ -3,24 +3,27 @@
 **cz-github-jira-conventional** is a plugin for the [**commitizen tools**](https://github.com/commitizen-tools/commitizen), a toolset that helps you to create [**conventional commit messages**](https://www.conventionalcommits.org/en/v1.0.0/). Since the structure of conventional commits messages is standardized they are machine readable and allow commitizen to automaticially calculate and tag [**semantic version numbers**](https://semver.org/) as well as create **CHANGELOG.md** files for your releases.
 
 This plugin extends the commitizen tools by:
-- **require a Jira issue id** in the commit message
+- **validate Jira issue IDs** when a commit message includes a scope
 - **create links to GitHub** commits in the CHANGELOG.md
 - **create links to Jira** issues in the CHANGELOG.md
 
-The Jira issue ID is required both when creating a commit with `cz commit` and
-when linting an existing message with `cz check`: a scope may be omitted, but if
-it is present it has to be a comma-separated list of Jira issue IDs matching the
-configured `jira_prefix`. This keeps the changelog links valid, since every scope
-is rendered as `<jira_base_url>/browse/<scope>`.
+The scope is optional both when creating a commit with `cz commit` and when
+linting an existing message with `cz check`. If supplied, it must contain a
+comma-separated list of Jira issue IDs matching the configured `jira_prefix`.
+Each issue ID is rendered as a link to `<jira_base_url>/browse/<issue_id>` in the
+changelog.
 
 ```
+> cz check --message "fix: correct minor typos in code"
+Commit validation: successful!
 > cz check --message "fix(XX-42): correct minor typos in code"
 Commit validation: successful!
 > cz check --message "fix(typos): correct minor typos in code"
 commit validation: failed!
 ```
 
-When you call commitizen `commit` you will be required you to enter the scope of your commit as a Jira issue id (or multiple issue ids, prefixed or without prefix, see config below).
+When you run `cz commit`, enter one or more Jira issue IDs at the scope prompt
+(prefixed or without a prefix, see config below), or press Enter to omit the scope.
 ```
 > cz commit
 ? Select the type of change you are committing fix: A bug fix. Correlates with PATCH in SemVer
@@ -38,6 +41,19 @@ The changelog created by cz (`cz bump --changelog`)will contain links to the com
 - **[XX-42](https://myproject.atlassian.net/browse/XX-42),[XX-13](https://myproject.atlassian.net/browse/XX-13)**: allow multiple issue to be referenced in the commit [07ab0](https://github.com/apheris/cz-github-jira-conventional/commit/07ab0e09de36712ab1db93fff0c821ecd80b5849)
 ``` 
 
+
+## Breaking change and migration (next major release)
+
+`cz check` now rejects free-form scopes such as `fix(ui): correct typos`, which
+previous versions accepted. Replace them with Jira issue IDs matching your
+configuration (for example, `fix(XX-42): correct typos`), or omit the scope
+(`fix: correct typos`). Update commit-message templates and PR titles used for
+squash merges accordingly.
+
+**Required release step:** The version bump is deferred to release preparation.
+Before publishing this change, update both `setup.py` and `.cz.yaml` from `3.0.2`
+to `4.0.0` and include this migration guidance in the changelog/release notes.
+Do not publish this behavior as a 3.x patch or minor release.
 
 ## Installation
 
