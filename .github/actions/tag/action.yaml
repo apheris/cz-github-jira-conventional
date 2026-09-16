@@ -1,0 +1,122 @@
+name: Tag release commits
+description: "Tag a release commit with the version found in the commitizen configuration file"
+
+# Checks whether a commit is a release commit ("bump: release vX.Y.Z"), reads the version from the
+# commitizen configuration file and creates the matching annotated tag through the GitHub API.
+
+inputs:
+  commit-message:
+    description: "Commit message to check for release indication"
+    required: true
+  repository:
+    description: "The repository to tag"
+    required: true
+  token:
+    description: "The token to use for steps that require it"
+    required: true
+  file-path:
+    description: "The path to the file to extract the version from"
+    required: true
+    default: ".cz.yaml"
+
+outputs:
+  tag:
+    description: "The tag that was created or verified, empty if the commit is not a release commit"
+    value: ${{ steps.get-release-version.outputs.tag }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Check commit message for release indication
+      shell: bash
+      id: release-check
+      env:
+        COMMIT_MESSAGE: ${{ inputs.commit-message }}
+      run: |
+        header=${COMMIT_MESSAGE%%$'\n'*}
+        # GitHub may append the PR number when squash-merging a release PR.
+        release_pattern='^bump: release v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.(0|[1-9][0-9]*))?)( \(#[1-9][0-9]*\))?$'
+        if [[ "$header" =~ $release_pattern ]]; then
+          echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "do-release=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::No release bump detected."
+        fi
+
+    - name: Checkout repository
+      if: ${{ !cancelled() && steps.release-check.outputs.do-release }}
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Get release version
+      shell: bash
+      id: get-release-version
+      if: ${{ !cancelled() && steps.release-check.outputs.do-release }}
+      env:
+        FILE_PATH: ${{ inputs.file-path }}
+        RELEASE_VERSION: ${{ steps.release-check.outputs.version }}
+      run: |
+        version=$(yq '.commitizen.version' "$FILE_PATH")
+        if [[ "$version" != "$RELEASE_VERSION" ]]; then
+          echo "::error::$FILE_PATH says $version but the release commit says $RELEASE_VERSION."
+          exit 1
+        fi
+        echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+    - name: Create tag
+      if: ${{ !cancelled() && steps.get-release-version.outputs.tag }}
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+      env:
+        RELEASE_TAG: ${{ steps.get-release-version.outputs.tag }}
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const tag = process.env.RELEASE_TAG;
+          const git = github.rest.git;
+          const reuseExistingTag = async () => {
+            let ref;
+            try {
+              ref = await git.getRef({ ...context.repo, ref: `tags/${tag}` });
+            } catch (error) {
+              if (error.status === 404) return false;
+              throw error;
+            }
+            let object = ref.data.object;
+            // Resolve annotated (including nested) and lightweight tags to their commit.
+            while (object.type === 'tag') {
+              const result = await git.getTag({ ...context.repo, tag_sha: object.sha });
+              object = result.data.object;
+            }
+            if (object.type !== 'commit' || object.sha !== context.sha) {
+              throw new Error(`Existing tag ${tag} does not resolve to release commit ${context.sha}.`);
+            }
+            core.info(`Reusing ${tag} at ${context.sha}.`);
+            return true;
+          };
+
+          if (await reuseExistingTag()) return;
+          const tagResult = await git.createTag({
+            ...context.repo,
+            tag,
+            message: `Release ${tag}`,
+            object: context.sha,
+            type: 'commit',
+          });
+          try {
+            await git.createRef({
+              ...context.repo,
+              ref: `refs/tags/${tag}`,
+              sha: tagResult.data.sha,
+            });
+          } catch (error) {
+            // Another run may have created the ref after our initial lookup.
+            if (error.status !== 422 || !(await reuseExistingTag())) throw error;
+          }
+
+    - name: Print tag to job summary
+      shell: bash
+      if: ${{ success() && steps.get-release-version.outputs.tag }}
+      env:
+        REPO: ${{ inputs.repository }}
+      run: echo "Tag [${{ steps.get-release-version.outputs.tag }}](https://github.com/$REPO/releases/tag/${{ steps.get-release-version.outputs.tag }}) created or verified." >> $GITHUB_STEP_SUMMARY
