@@ -95,6 +95,25 @@ def test_changelog_checks_protection_before_checkout_and_pins_verified_commit():
     assert "BASE_BRANCH_SHA=$BASE_SHA" in base["run"]
 
 
+def test_changelog_cleanup_only_deletes_branch_created_by_current_run():
+    steps = action_steps(CHANGELOG)
+    create = next(
+        s
+        for s in steps
+        if s.get("uses", "").startswith("peterjgrainger/action-create-branch@")
+    )
+    cleanup = next(
+        s
+        for s in steps
+        if s.get("uses", "").startswith("dawidd6/action-delete-branch@")
+    )
+    assert create["id"] == "create-branch"
+    # Compare explicitly: the string 'false' is truthy in GitHub expressions.
+    assert cleanup["if"] == "failure() && steps.create-branch.outputs.created == 'true'"
+    assert cleanup["with"]["branches"] == create["with"]["branch"]
+    assert steps.index(create) < steps.index(cleanup)
+
+
 @pytest.mark.parametrize(
     "scenario",
     [
