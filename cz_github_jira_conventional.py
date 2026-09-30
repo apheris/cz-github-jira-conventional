@@ -2,7 +2,9 @@ import os
 import re
 from typing import Any, Dict, List
 
-from commitizen import defaults, git, config
+from commitizen import defaults, git
+from commitizen.config.base_config import BaseConfig
+from commitizen.exceptions import InvalidConfigurationError
 from commitizen.cz.base import BaseCommitizen
 from commitizen.cz.conventional_commits import ConventionalCommitsCz
 from commitizen.cz.utils import multiple_line_breaker, required_validator
@@ -32,43 +34,34 @@ class GithubJiraConventionalCz(BaseCommitizen):
     commit_parser = ConventionalCommitsCz.commit_parser
     changelog_pattern = defaults.BUMP_PATTERN
 
-    # Read the config file and check if required settings are available
-    conf = config.read_cfg()
-    jira_prefix_hint = ""
-    if "jira_prefix" in conf.settings:
-        jira_prefix = conf.settings["jira_prefix"]
-        issue_multiple_hint = "42, 123"
-        # if there is only one project prefix, show it as prefix hint
-        if not isinstance(jira_prefix, list):
-            jira_prefix_hint = jira_prefix
-    else:
-        jira_prefix = ""
-        issue_multiple_hint = "XZ-42, XY-123"
-
-    if "jira_base_url" not in conf.settings:
-        print(
-            "Please add the key jira_base_url to your .cz.yaml|json|toml config file."
+    def __init__(self, config: BaseConfig) -> None:
+        # Commitizen imports every installed plugin during discovery, even when a
+        # different plugin is selected. Read and validate the project config only
+        # when this plugin is actually instantiated.
+        super().__init__(config)
+        settings = self.config.settings
+        self.jira_prefix = settings.get("jira_prefix", "")
+        self.issue_multiple_hint = (
+            "42, 123" if self.jira_prefix else "XZ-42, XY-123"
         )
-        quit()
+        self.jira_prefix_hint = (
+            self.jira_prefix if isinstance(self.jira_prefix, str) else ""
+        )
 
-    if "github_repo" not in conf.settings:
-        print("Please add the key github_repo to your .cz.yaml|json|toml config file.")
-        quit()
+        for key in ("jira_base_url", "github_repo"):
+            if not settings.get(key):
+                raise InvalidConfigurationError(
+                    f"Please add the key {key} to your .cz.yaml|json|toml config file."
+                )
+        self.jira_base_url = settings["jira_base_url"]
+        self.github_repo = settings["github_repo"]
+        self.github_base_url = settings.get("github_base_url", DEFAULT_GITHUB_BASE_URL)
 
-    jira_base_url = conf.settings["jira_base_url"]
-    github_repo = conf.settings["github_repo"]
-
-    if "github_base_url" not in conf.settings:
-        github_base_url = DEFAULT_GITHUB_BASE_URL
-    else:
-        github_base_url = conf.settings["github_base_url"]
-
-    if "change_type_map" not in conf.settings:
-        change_type_map = DEFAULT_CHANGE_TYPE_MAP
-    else:
-        # change_type_map = conf.settings["change_type_map"]
-        print("Only default change type map is supported at the moment.")
-        quit()
+        if "change_type_map" in settings:
+            raise InvalidConfigurationError(
+                "Only default change type map is supported at the moment."
+            )
+        self.change_type_map = DEFAULT_CHANGE_TYPE_MAP
 
     def questions(self) -> List[Dict[str, Any]]:
         questions: List[Dict[str, Any]] = [
