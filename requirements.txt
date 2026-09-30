@@ -1,6 +1,9 @@
 black==26.5.1
+build==1.6.1
+commitizen==4.18.1
 pre-commit==4.6.2
 pytest==9.1.1
+PyYAML==6.0.3
 questionary==2.1.1
 setuptools==84.0.0
 twine==7.0.0
