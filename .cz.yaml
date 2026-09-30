@@ -5,8 +5,8 @@ commitizen:
   jira_prefix: XX-
   name: cz_github_jira_conventional
   tag_format: v$version
-  version: 3.0.2
-  version_scheme: semver2
+  version: 4.0.0
   version_files:
-    - setup.py:version
-    - .cz.yaml
+  - setup.py:version
+  - .cz.yaml
+  version_scheme: semver2
