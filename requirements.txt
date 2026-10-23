@@ -8,3 +8,4 @@ questionary==2.1.1
 setuptools==84.0.0
 twine==7.0.0
 wheel==0.48.0
+virtualenv>=21.14.9 # transitive dependency pinned by Aikido Autofix to remediate a vulnerability
