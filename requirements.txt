@@ -5,6 +5,6 @@ pre-commit==4.6.2
 pytest==9.1.1
 PyYAML==6.0.3
 questionary==2.1.1
-setuptools==84.0.0
+setuptools==84.1.0
 twine==7.0.0
 wheel==0.48.0
