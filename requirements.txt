@@ -1,4 +1,4 @@
-black==26.5.1
+black==26.10.1
 build==1.6.1
 commitizen==4.18.1
 pre-commit==4.6.2
