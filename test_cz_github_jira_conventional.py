@@ -1,4 +1,8 @@
+import os
 import re
+import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 from commitizen import config, git
@@ -116,7 +120,7 @@ def test_process_commit_still_returns_the_message(cz):
 
 
 def test_multiple_prefixes_are_accepted(cz, monkeypatch):
-    monkeypatch.setattr(GithubJiraConventionalCz, "jira_prefix", ["XX-", "XY-"])
+    monkeypatch.setattr(cz, "jira_prefix", ["XX-", "XY-"])
 
     assert check(cz, "fix(XY-42): a configured prefix is accepted")
     assert check(cz, "fix(XX-42,XY-43): prefixes may be mixed")
@@ -124,7 +128,50 @@ def test_multiple_prefixes_are_accepted(cz, monkeypatch):
 
 
 def test_without_a_configured_prefix_any_prefix_is_accepted(cz, monkeypatch):
-    monkeypatch.setattr(GithubJiraConventionalCz, "jira_prefix", "")
+    monkeypatch.setattr(cz, "jira_prefix", "")
 
     assert check(cz, "fix(YY-42): the user writes the prefix themselves")
     assert not check(cz, "fix(42): a number without a prefix is not a jira issue")
+
+
+def test_config_is_per_instance(cz):
+    other_config = config.read_cfg()
+    other_config.settings.update(
+        jira_prefix=["XY-"],
+        jira_base_url="https://other.atlassian.net",
+        github_repo="other/repo",
+    )
+    other = GithubJiraConventionalCz(other_config)
+
+    assert cz.jira_prefix == "XX-"
+    assert cz.jira_base_url == "https://myproject.atlassian.net"
+    assert check(cz, "fix(XX-42): valid in this project")
+    assert not check(other, "fix(XX-42): invalid in the other project")
+    assert check(other, "fix(XY-42): valid in the other project")
+
+
+def test_installed_plugin_does_not_break_other_projects(tmp_path):
+    # Discovery imports all installed plugins, including this one, even when
+    # another plugin is configured. Exercise the real CLI from another cwd.
+    env = {**os.environ, "PYTHONPATH": str(Path(__file__).parent)}
+
+    def run(*args):
+        return subprocess.run(
+            [sys.executable, "-m", "commitizen", *args],
+            cwd=tmp_path,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+    invalid = run("check", "--message", "not a conventional commit")
+    assert invalid.returncode != 0
+    assert "jira_base_url" not in invalid.stdout + invalid.stderr
+    assert run("check", "--message", "fix: a valid commit").returncode == 0
+
+    (tmp_path / ".cz.yaml").write_text(
+        "commitizen:\n  name: cz_github_jira_conventional\n"
+    )
+    missing_config = run("check", "--message", "fix: a valid commit")
+    assert missing_config.returncode != 0
+    assert "jira_base_url" in missing_config.stdout + missing_config.stderr

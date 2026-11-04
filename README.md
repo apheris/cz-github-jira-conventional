@@ -58,7 +58,14 @@ Do not publish this behavior as a 3.x patch or minor release.
 ## Installation
 
 Install with pip
-`python -m pip install cz-github-jira-conventional` 
+`python -m pip install cz-github-jira-conventional`
+
+A single Commitizen installation can be shared across projects. Commitizen discovers
+installed plugins globally, but this plugin reads its Jira settings only when a
+project selects `name: cz_github_jira_conventional`. Other projects can use
+Commitizen's default plugin (or select another plugin) without defining Jira
+settings. In a project selecting this plugin, missing required settings fail
+with a nonzero exit code instead of silently skipping commit validation.
 
 You need to use a cz config file that has the **required** additional values `jira_base_url` and `github_repo` and may contain the **optional** value `jira_prefix`.
 
