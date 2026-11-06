@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    # Keep version-update PRs disabled; security-update PRs are unaffected.
+    open-pull-requests-limit: 0
+    commit-message:
+      # An explicit colon prevents inferred prefixes/scopes such as build(deps).
+      prefix: "chore: "
+      prefix-development: "chore: "
